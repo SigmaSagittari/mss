@@ -213,6 +213,7 @@ class Zini {
 			   cls++;
 			if (pl.bbv[i][j]) bbv++;
 		 }
+	  assert(cls < pl.openings + bbv);
 	  return { cls,pl.openings + bbv };
    }
 };
