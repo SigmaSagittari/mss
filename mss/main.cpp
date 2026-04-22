@@ -25,6 +25,8 @@ using namespace std;
 #include "probability.h"   // 根据地雷分布计算概率，生成随机分布等等
 #include "zinialgo.h"      // 包含 Zini 算法的实现
 #include "analysiscache.h" // 管理分析结果的缓存，避免重复计算，一键导入上下文
+
+
 int main() {
    int n, m, mines; char t;
    if (!(cin >> m >> t >> n >> t >> mines)) return 0;
