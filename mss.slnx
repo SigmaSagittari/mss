@@ -1,0 +1,7 @@
+<Solution>
+  <Configurations>
+    <Platform Name="x64" />
+    <Platform Name="x86" />
+  </Configurations>
+  <Project Path="mss/mss.vcxproj" Id="fb5123b1-00e6-4ad0-a2ea-033669e58e9c" />
+</Solution>
