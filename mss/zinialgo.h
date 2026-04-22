@@ -187,27 +187,6 @@ class Zini {
    };
    ZiniResult ChainZini(const GameState& state, const 地雷排布& mines, unsigned long long& seed) {
 	  player pl(state, mines, seed);
-	  cerr << "[DEBUG] : priority matrix:" << endl;
-	  for (int i = 1; i <= state.rows; ++i) {
-		 for (int j = 1; j <= state.cols; ++j)
-			cerr << pl.priority[i][j] << ' ';
-		cerr << endl;
-	  }
-	  cerr << endl;
-	  cerr << "[DEBUG] : bbbv matrix:" << endl;
-	  for (int i = 1; i <= state.rows; ++i) {
-		 for (int j = 1; j <= state.cols; ++j)
-			cerr << pl.bbv[i][j] << ' ';
-		 cerr << endl;
-	  }
-	  cerr << endl;
-	  cerr << "[DEBUG] : hide_val matrix:" << endl;
-	  for (int i = 1; i <= state.rows; ++i) {
-		 for (int j = 1; j <= state.cols; ++j)
-			cerr << pl.hide_val[i][j] << ' ';
-		 cerr << endl;
-	  }
-	  cerr << endl;
 	  int cls=0;
 	  while (true) {
 		 pair<int, int> best = pl.pop_best(seed);
