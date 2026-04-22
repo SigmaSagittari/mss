@@ -21,7 +21,7 @@ using namespace std;
 
 #include "core.h"          // 数据结构
 
-
+#define cerr if(false) cerr
 class Zini {
    public:
    struct player {
@@ -37,7 +37,7 @@ class Zini {
 	  struct check_info {
 		 vector<pair<int, int>> check_priority[10];
 		 int maximum = 0;
-		 void insert(int x, int y, int p,unsigned long long& seed) {
+		 void insert(int x, int y, int p, unsigned long long& seed) {
 			if (p >= 0) {
 			   check_priority[p].push_back({ x, y });
 			   maximum = max(maximum, p);
@@ -47,13 +47,13 @@ class Zini {
 		 }
 	  } check;
 	  int openings;
-	  void opening_tile_dfs(int x, int y,int id) {
+	  void opening_tile_dfs(int x, int y, int id) {
 		 vis[x][y] = true;
 		 for_each_adjacent(x, y, board.rows, board.cols, [&](int nx, int ny) {
-			if(vis[nx][ny] == false && hide_val[nx][ny] == 0) opening_tile_dfs(nx, ny, id);
+			if (vis[nx][ny] == false && hide_val[nx][ny] == 0) opening_tile_dfs(nx, ny, id);
 		 });
 	  }
-	  player(const GameState& state, const 地雷排布& mines, unsigned long long &seed)
+	  player(const GameState& state, const 地雷排布& mines, unsigned long long& seed)
 		 : board(state)
 		 , mines(mines)
 		 , hide_val(state.rows + 1, vector<int>(state.cols + 1, 0))
@@ -94,7 +94,7 @@ class Zini {
 				  priority[i][j] = -10000;
 			   else
 				  if (hide_val[i][j] == 0) {
-					 priority[i][j] = 0;
+					 priority[i][j] = board.board[i][j] == GameState::Cell::H ? 0 : -10000;
 					 continue;
 				  }
 			   priority[i][j]--;
@@ -110,7 +110,7 @@ class Zini {
 				  });
 			   }
 			}
-		 for(int i=1;i<=state.rows;++i)
+		 for (int i = 1; i <= state.rows; ++i)
 			for (int j = 1; j <= state.cols; ++j)
 			   check.insert(i, j, priority[i][j], seed);
 	  }
@@ -166,12 +166,12 @@ class Zini {
 		 });
 		 priority[x][y] = -10000; // 人不能两次 chord 同一个格子
 	  }
-	  pair<int,int> pop_best(unsigned long long& seed) {
+	  pair<int, int> pop_best(unsigned long long& seed) {
 		 for (int i = check.maximum; i >= 0; --i) {
 			while (!check.check_priority[i].empty()) {
 			   pair<int, int> res = check.check_priority[i].back();
 			   check.check_priority[i].pop_back();
-			   if(priority[res.first][res.second] == i)
+			   if (priority[res.first][res.second] == i)
 				  return res;
 			   check.insert(res.first, res.second, priority[res.first][res.second], seed);
 
@@ -185,15 +185,123 @@ class Zini {
    struct ZiniResult {
 	  int Zini, bbbv;
    };
+   int chaincount(const GameState& state, const 地雷排布& mines, const vector<vector<int>>& hide_val, const vector<vector<bool>>& chorded) {
+	  int R = state.rows, C = state.cols;
+	  vector<vector<int>> id(R + 1, vector<int>(C + 1, -1));
+	  int nid = 0;
+	  for (int i = 1; i <= R; ++i)
+		 for (int j = 1; j <= C; ++j)
+			if (chorded[i][j]) id[i][j] = nid++;
+	  if (nid == 0) return 0;
+	  vector<int> parent(nid), rnk(nid, 0);
+	  for (int i = 0; i < nid; ++i) parent[i] = i;
+	  function<int(int)> find = [&](int x) {
+		 return parent[x] == x ? x : parent[x] = find(parent[x]);
+	  };
+	  auto unite = [&](int a, int b) {
+		 int pa = find(a), pb = find(b);
+		 if (pa == pb) return;
+		 if (rnk[pa] < rnk[pb]) parent[pa] = pb;
+		 else if (rnk[pb] < rnk[pa]) parent[pb] = pa;
+		 else { parent[pb] = pa; rnk[pa]++; }
+	  };
+	  for (int i = 1; i <= R; ++i) {
+		 for (int j = 1; j <= C; ++j) {
+			if (id[i][j] == -1) continue;
+			for (int dx = -1; dx <= 1; ++dx) for (int dy = -1; dy <= 1; ++dy) {
+			   if (dx == 0 && dy == 0) continue;
+			   int ni = i + dx, nj = j + dy;
+			   if (ni >= 1 && ni <= R && nj >= 1 && nj <= C && id[ni][nj] != -1) {
+				  unite(id[i][j], id[ni][nj]);
+			   }
+			}
+		 }
+	  }
+	  vector<vector<char>> vis(R + 1, vector<char>(C + 1, 0));
+	  auto dfs_zero = [&](int si, int sj) {
+		 vector<pair<int, int>> st;
+		 st.reserve(64);
+		 st.push_back({ si, sj });
+		 vis[si][sj] = 1;
+		 int fa_id = -1;
+		 for (size_t p = 0; p < st.size(); ++p) {
+			int x = st[p].first, y = st[p].second;
+			// for this zero cell, connect any chorded neighbor to fa_id
+			for (int dx = -1; dx <= 1; ++dx) for (int dy = -1; dy <= 1; ++dy) {
+			   int nx = x + dx, ny = y + dy;
+			   if (nx >= 1 && nx <= R && ny >= 1 && ny <= C) {
+				  int cid = id[nx][ny];
+				  if (cid != -1) {
+					 if (fa_id == -1) {
+						fa_id = cid;
+					 }
+					 else {
+						unite(fa_id, cid);
+					 }
+				  }
+			   }
+			}
+			// expand region to neighboring zero cells
+			for (int dx = -1; dx <= 1; ++dx) for (int dy = -1; dy <= 1; ++dy) {
+			   if (dx == 0 && dy == 0) continue;
+			   int nx = x + dx, ny = y + dy;
+			   if (nx >= 1 && nx <= R && ny >= 1 && ny <= C && !vis[nx][ny] && hide_val[nx][ny] == 0 && mines.dist[nx][ny] == false) {
+				  vis[nx][ny] = 1;
+				  st.push_back({ nx, ny });
+			   }
+			}
+		 }
+	  };
+
+	  for (int i = 1; i <= R; ++i) {
+		 for (int j = 1; j <= C; ++j) {
+			if (hide_val[i][j] == 0 && mines.dist[i][j] == false && !vis[i][j]) dfs_zero(i, j);
+		 }
+	  }
+
+	  unordered_set<int> roots;
+	  roots.reserve(nid);
+	  unordered_map<int, bool> valid; // root -> whether this component should be counted
+	  // collect cells per component for debugging
+	  unordered_map<int, vector<pair<int, int>>> compCells;
+	  for (int i = 1; i <= R; ++i) {
+		 for (int j = 1; j <= C; ++j) {
+			if (id[i][j] != -1) {
+			   int r = find(id[i][j]);
+			   roots.insert(r);
+			   compCells[r].push_back({ i,j });
+			}
+		 }
+	  }
+
+	  int cnt = 0;
+	  for (auto& kv : compCells) {
+		 int r = kv.first;
+		 auto& cells = kv.second;
+		 bool is_valid = true;
+		 for (auto& p : cells) {
+			int i = p.first, j = p.second;
+			if (state.board[i][j] != GameState::Cell::H) {
+			   is_valid = false;
+			   break; // one is enough
+			}
+		 }
+		 if (is_valid) {
+			++cnt;
+		 }
+	  }
+	  return cnt;
+   }
    ZiniResult ChainZini(const GameState& state, const 地雷排布& mines, unsigned long long& seed) {
 	  player pl(state, mines, seed);
-	  int cls=0;
+	  int cls = 0;
+	  vector<vector<bool>> chorded(state.rows + 1, vector<bool>(state.cols + 1, false));
 	  while (true) {
 		 pair<int, int> best = pl.pop_best(seed);
 		 if (best == pair<int, int> {-1, -1}) break;
 		 if (pl.board.board[best.first][best.second] == GameState::Cell::H) { // 没打开就打开
 			pl.open(best.first, best.second, seed);
-			cls++;
+			// 这里原本是需要修改 cls 的，但是接下来有一些复杂的图论处理，最后再根据连通块数量来计算 cls。
 		 }
 		 for_each_adjacent(best.first, best.second, pl.board.rows, pl.board.cols, [&](int nx, int ny) { // 标一圈旗
 			if (mines.dist[nx][ny] == true && pl.board.flags[nx][ny] == false) {
@@ -201,11 +309,13 @@ class Zini {
 			   cls++;
 			}
 		 });
+		 chorded[best.first][best.second] = true; // 标记这个格子处理过了
 		 if (pl.board.board[best.first][best.second] != GameState::Cell::N0) { // 如果打开的非空，就 chord
 			pl.chord(best.first, best.second, seed);
 			cls++;
 		 }
 	  }
+
 	  int bbv = 0;
 	  for (int i = 1; i <= state.rows; ++i)
 		 for (int j = 1; j <= state.cols; ++j) {
@@ -213,7 +323,12 @@ class Zini {
 			   cls++;
 			if (pl.bbv[i][j]) bbv++;
 		 }
+
+	  int val = chaincount(state, mines, pl.hide_val, chorded);
+	  cls += val;
 	  assert(cls < pl.openings + bbv);
 	  return { cls,pl.openings + bbv };
    }
 };
+
+#undef cerr

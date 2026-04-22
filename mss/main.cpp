@@ -35,43 +35,70 @@ int main() {
    vector<string> rows;
    rows.reserve(R);
    for (int i = 0; i < R; ++i) {
-	  string s; cin >> s;
-	  if ((int)s.size() < C) s.append(C - (int)s.size(), 'H');
-	  rows.push_back(s);
+      string s; cin >> s;
+      if ((int)s.size() < C) s.append(C - (int)s.size(), 'H');
+      rows.push_back(s);
    }
 
    GameState gs(R, C, mines);
+   地雷排布 pa;
+   pa.dist = vector<vector<bool>>(R + 1, vector<bool>(C + 1, false));
+
    for (int i = 0; i < R; ++i) {
-	  for (int j = 0; j < C; ++j) {
-		 char ch = rows[i][j];
-		 if (ch == 'H' || ch == 'h') {
-			gs.board[i + 1][j + 1] = GameState::Cell::H;
-		 }
-		 else if (ch == 'F' || ch == 'f') {
-			gs.flags[i + 1][j + 1] = true;
-			gs.board[i + 1][j + 1] = GameState::Cell::H;
-		 }
-		 else if (ch >= '0' && ch <= '8') {
-			gs.board[i + 1][j + 1] = static_cast<GameState::Cell>(ch - '0');
-		 }
-		 else {
-			gs.board[i + 1][j + 1] = GameState::Cell::H;
-		 }
-	  }
+      for (int j = 0; j < C; ++j) {
+         char ch = rows[i][j];
+         if (ch == 'H' || ch == 'h') {
+            gs.board[i + 1][j + 1] = GameState::Cell::H;
+            pa.dist[i + 1][j + 1] = false;
+         }
+         else if (ch == 'F' || ch == 'f') {
+            gs.flags[i + 1][j + 1] = true;
+            gs.board[i + 1][j + 1] = GameState::Cell::H;
+            pa.dist[i + 1][j + 1] = true; // F also sets mine distribution
+         }
+         else if (ch == 'M' || ch == 'm') {
+            // New input: M marks a mine in distribution but GameState remains hidden
+            gs.board[i + 1][j + 1] = GameState::Cell::H;
+            pa.dist[i + 1][j + 1] = true;
+         }
+         else if (ch >= '0' && ch <= '8') {
+            gs.board[i + 1][j + 1] = static_cast<GameState::Cell>(ch - '0');
+            pa.dist[i + 1][j + 1] = false;
+         }
+         else {
+            gs.board[i + 1][j + 1] = GameState::Cell::H;
+            pa.dist[i + 1][j + 1] = false;
+         }
+      }
    }
 
-   AnalysisCache cache(gs);
-   unsigned long long seed = 123456789;
-   地雷排布 pa = cache.genRandom(seed);
+   cerr << "[Mainboard]" << endl;
+   for (int i = 1; i <= gs.rows; ++i) {
+      for (int j = 1; j <= gs.cols; ++j) {
+         cerr << static_cast<int> (gs.board[i][j]) << " ";
+      }
+      cerr << endl;
+   }
+
+
+   //AnalysisCache cache(gs);
+   unsigned long long seed = 18075243459941470590;
+   // 地雷排布 pa 已由输入指定; 不再用随机生成
+
    for (int i = 1; i <= R; ++i) {
-	  for (int j = 1; j <= C; ++j) {
-		 cerr << ".#"[pa.dist[i][j]];
-	  }
-	  cerr << endl;
+      for (int j = 1; j <= C; ++j) {
+         cerr << ".#"[pa.dist[i][j]];
+      }
+      cerr << endl;
    }
 
-   Zini zini;
+   Zini zini ;
    Zini::ZiniResult res = zini.ChainZini(gs, pa, seed);
-   cerr << res.bbbv << ' ' << res.Zini << endl;
+   cerr << res.bbbv << ' ' << res.Zini << endl; 
 
+   for (int i = 1; i <= 10000; ++i) {
+      res = zini.ChainZini(gs, pa, seed);
+      if(res.Zini<=113)
+	     cerr << res.bbbv << ' ' << res.Zini << endl;
+   }
 }
