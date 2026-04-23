@@ -41,5 +41,8 @@
     <ClInclude Include="zinialgo.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="ioealgo.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

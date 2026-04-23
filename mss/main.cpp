@@ -24,6 +24,7 @@ using namespace std;
 #include "distrubution.h"  // 根据结构计算地雷分布
 #include "probability.h"   // 根据地雷分布计算概率，生成随机分布等等
 #include "zinialgo.h"      // 包含 Zini 算法的实现
+#include "ioealgo.h"       // 包含 ioe 算法的实现
 #include "analysiscache.h" // 管理分析结果的缓存，避免重复计算，一键导入上下文
 
 
@@ -92,13 +93,11 @@ int main() {
       cerr << endl;
    }
 
-   Zini zini ;
-   Zini::ZiniResult res = zini.ChainZini(gs, pa, seed);
+   ZiniAlgo zini ;
+   Zini结果 res = zini.ChainZini(gs, pa, seed);
    cerr << res.bbbv << ' ' << res.Zini << endl; 
 
    for (int i = 1; i <= 10000; ++i) {
       res = zini.ChainZini(gs, pa, seed);
-      if(res.Zini<=113)
-	     cerr << res.bbbv << ' ' << res.Zini << endl;
    }
 }

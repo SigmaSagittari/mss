@@ -18,12 +18,13 @@
 
 using namespace std;
 
-#include "core.h"          // 数据结构
-#include "basic.h"         // 基础逻辑分析算法（降低核心算法压力）
-#include "struct.h"        // 建立棋盘的图论结构（连通块等）
-#include "distrubution.h"  // 根据结构计算地雷分布
-#include "probability.h"   // 根据地雷分布计算概率，生成随机分布等等
-#include "zinialgo.h"      // 包含 Zini 算法的实现（主要是为了那个 ZiniInput 类）
+#include "core.h"
+#include "basic.h"
+#include "struct.h"
+#include "distrubution.h"
+#include "probability.h"
+#include "zinialgo.h"
+#include "ioealgo.h"
 
 class AnalysisCache {
    private:
@@ -61,5 +62,8 @@ class AnalysisCache {
    template<typename Callback>
    void all_distrubte(Callback callback) {
 	  概率分析().all_distrubte(*state_, get_基础逻辑结果(), get_棋盘结构(), get_地雷分布(true), callback);
+   }
+   高ZNE版面结果 get_highZNE(unsigned long long& seed, long double znereq, int cls, int algo_itr, int zini_itr = 10) {
+	  return ioealgo().get_highZNE(*state_, get_基础逻辑结果(), get_棋盘结构(), get_地雷分布(true), seed, znereq, cls, algo_itr, zini_itr);
    }
 };

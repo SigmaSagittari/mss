@@ -134,6 +134,7 @@
     <ClInclude Include="analysiscache.h" />
     <ClInclude Include="basic.h" />
     <ClInclude Include="core.h" />
+    <ClInclude Include="ioealgo.h" />
     <ClInclude Include="probability.h" />
     <ClInclude Include="struct.h" />
     <ClInclude Include="zinialgo.h" />

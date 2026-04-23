@@ -19,10 +19,9 @@
 
 using namespace std;
 
-#include "core.h"          // 数据结构
+#include "core.h"
 
-#define cerr if(false) cerr
-class Zini {
+class ZiniAlgo {
    public:
    struct player {
 	  GameState board;
@@ -181,10 +180,6 @@ class Zini {
 		 return { -1, -1 };
 	  }
    };
-   public:
-   struct ZiniResult {
-	  int Zini, bbbv;
-   };
    int chaincount(const GameState& state, const 地雷排布& mines, const vector<vector<int>>& hide_val, const vector<vector<bool>>& chorded) {
 	  int R = state.rows, C = state.cols;
 	  vector<vector<int>> id(R + 1, vector<int>(C + 1, -1));
@@ -292,43 +287,45 @@ class Zini {
 	  }
 	  return cnt;
    }
-   ZiniResult ChainZini(const GameState& state, const 地雷排布& mines, unsigned long long& seed) {
-	  player pl(state, mines, seed);
-	  int cls = 0;
-	  vector<vector<bool>> chorded(state.rows + 1, vector<bool>(state.cols + 1, false));
-	  while (true) {
-		 pair<int, int> best = pl.pop_best(seed);
-		 if (best == pair<int, int> {-1, -1}) break;
-		 if (pl.board.board[best.first][best.second] == GameState::Cell::H) { // 没打开就打开
-			pl.open(best.first, best.second, seed);
-			// 这里原本是需要修改 cls 的，但是接下来有一些复杂的图论处理，最后再根据连通块数量来计算 cls。
-		 }
-		 for_each_adjacent(best.first, best.second, pl.board.rows, pl.board.cols, [&](int nx, int ny) { // 标一圈旗
-			if (mines.dist[nx][ny] == true && pl.board.flags[nx][ny] == false) {
-			   pl.flag(nx, ny, seed);
+   public:
+   Zini结果 ChainZini(const GameState& state, const 地雷排布& mines, unsigned long long& seed, int itr = 1) {
+	  int global_cls = 2147483647, bbv = 0;
+	  for (int i = 1; i <= itr; ++i) {
+		 player pl(state, mines, seed);
+		 int cls = 0;
+		 vector<vector<bool>> chorded(state.rows + 1, vector<bool>(state.cols + 1, false));
+		 while (true) {
+			pair<int, int> best = pl.pop_best(seed);
+			if (best == pair<int, int> {-1, -1}) break;
+			if (pl.board.board[best.first][best.second] == GameState::Cell::H) { // 没打开就打开
+			   pl.open(best.first, best.second, seed);
+			   // 这里原本是需要修改 cls 的，但是接下来有一些复杂的图论处理，最后再根据连通块数量来计算 cls。
+			}
+			for_each_adjacent(best.first, best.second, pl.board.rows, pl.board.cols, [&](int nx, int ny) { // 标一圈旗
+			   if (mines.dist[nx][ny] == true && pl.board.flags[nx][ny] == false) {
+				  pl.flag(nx, ny, seed);
+				  cls++;
+			   }
+			});
+			chorded[best.first][best.second] = true; // 标记这个格子处理过了
+			if (pl.board.board[best.first][best.second] != GameState::Cell::N0) { // 如果打开的非空，就 chord
+			   pl.chord(best.first, best.second, seed);
 			   cls++;
 			}
-		 });
-		 chorded[best.first][best.second] = true; // 标记这个格子处理过了
-		 if (pl.board.board[best.first][best.second] != GameState::Cell::N0) { // 如果打开的非空，就 chord
-			pl.chord(best.first, best.second, seed);
-			cls++;
+		 }
+		 cls += chaincount(state, mines, pl.hide_val, chorded);
+		 for (int i = 1; i <= state.rows; ++i)
+			for (int j = 1; j <= state.cols; ++j)
+			   if (pl.board.board[i][j] == GameState::Cell::H && mines.dist[i][j] == false)
+				  cls++;
+		 global_cls = min(global_cls, cls);
+		 if (i == 1) { // 只计算第一次的 bbbv。
+			for (int i = 1; i <= state.rows; ++i)
+			   for (int j = 1; j <= state.cols; ++j)
+				  if (pl.bbv[i][j]) bbv++;
+			bbv += pl.openings;
 		 }
 	  }
-
-	  int bbv = 0;
-	  for (int i = 1; i <= state.rows; ++i)
-		 for (int j = 1; j <= state.cols; ++j) {
-			if (pl.board.board[i][j] == GameState::Cell::H && mines.dist[i][j] == false)
-			   cls++;
-			if (pl.bbv[i][j]) bbv++;
-		 }
-
-	  int val = chaincount(state, mines, pl.hide_val, chorded);
-	  cls += val;
-	  assert(cls < pl.openings + bbv);
-	  return { cls,pl.openings + bbv };
+	  return { global_cls, bbv };
    }
 };
-
-#undef cerr

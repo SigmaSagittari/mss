@@ -18,10 +18,10 @@
 
 using namespace std;
 
-#include "core.h"          // 数据结构
-#include "basic.h"         // 基础逻辑分析算法（降低核心算法压力）
-#include "struct.h"        // 建立棋盘的图论结构（连通块等）
-#include "distrubution.h"  // 根据结构计算地雷分布
+#include "core.h"
+#include "basic.h"
+#include "struct.h"
+#include "distrubution.h"
 class 概率分析 {
    private:
    struct 随机生成结果 {

@@ -120,3 +120,12 @@ struct 地雷概率 {
 struct 地雷排布 {
    vector<vector<bool>> dist;
 };
+
+struct Zini结果 {
+   int Zini, bbbv;
+};
+
+struct 高ZNE版面结果 {
+   int count = 0; // 满足条件的版面数量
+   地雷概率 dist;
+};
