@@ -129,3 +129,13 @@ struct 高ZNE版面结果 {
    int count = 0; // 满足条件的版面数量
    地雷概率 dist;
 };
+
+struct ZNR计算结果 {
+   struct 单个格子结果 {
+	  int x, y; // 坐标
+	  array<bool,8> fl; // 周围八个格子的标雷情况，按照从上到下从左到右的顺序排列。
+	  long double probability; // **如果标雷正确**，这个操作是 Zini 的概率。需要结合 ZNE 版面结果进行判定
+	  // 例如，一个操作可能拥有 100% 的 probability，但是实际上是因为这个雷排列极其稀有，所以这个操作其实是很差的。
+   };
+   vector<单个格子结果> ZNR; // 每个"操作"是 Zini 的概率
+};

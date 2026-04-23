@@ -180,7 +180,7 @@ class ZiniAlgo {
 		 return { -1, -1 };
 	  }
    };
-   int chaincount(const GameState& state, const 地雷排布& mines, const vector<vector<int>>& hide_val, const vector<vector<bool>>& chorded) {
+   int chaincount(const GameState& state, const 地雷排布& mines, const vector<vector<int>>& hide_val, const vector<vector<bool>>& chorded, pair<int,int> fixedplay = {0,0}) {
 	  int R = state.rows, C = state.cols;
 	  vector<vector<int>> id(R + 1, vector<int>(C + 1, -1));
 	  int nid = 0;
@@ -276,7 +276,7 @@ class ZiniAlgo {
 		 bool is_valid = true;
 		 for (auto& p : cells) {
 			int i = p.first, j = p.second;
-			if (state.board[i][j] != GameState::Cell::H) {
+			if (state.board[i][j] != GameState::Cell::H || pair<int,int> {i,j} == fixedplay) {
 			   is_valid = false;
 			   break; // one is enough
 			}
@@ -288,14 +288,26 @@ class ZiniAlgo {
 	  return cnt;
    }
    public:
-   Zini结果 ChainZini(const GameState& state, const 地雷排布& mines, unsigned long long& seed, int itr = 1) {
+   template<bool fixedplay>
+   Zini结果 ChainZini(const GameState& state, const 地雷排布& mines, unsigned long long& seed, int itr = 1, int x = 0, int y = 0) {
 	  int global_cls = 2147483647, bbv = 0;
 	  for (int i = 1; i <= itr; ++i) {
 		 player pl(state, mines, seed);
 		 int cls = 0;
+		 bool firstmove_open = false;
+		 if constexpr (fixedplay)
+			if (state.board[x][y] == GameState::Cell::H && pl.hide_val[x][y] != 0) { // 强迫性地做第一步，如果是需要打开的格子那就打开
+			   pl.open(x, y, seed);
+			   cls++;
+			   firstmove_open = true;
+			}
 		 vector<vector<bool>> chorded(state.rows + 1, vector<bool>(state.cols + 1, false));
-		 while (true) {
+		 for (int loop = 1;; ++loop) {
 			pair<int, int> best = pl.pop_best(seed);
+			if constexpr (fixedplay)
+			   if (state.board[x][y] != GameState::Cell::H && loop == 1) { // 强迫第一步，如果不需要打开，说明应该被 chord
+				  best = pair<int, int>{ x, y }; // 狸猫换太子，强迫性地 chord 这个格子
+			   }
 			if (best == pair<int, int> {-1, -1}) break;
 			if (pl.board.board[best.first][best.second] == GameState::Cell::H) { // 没打开就打开
 			   pl.open(best.first, best.second, seed);
@@ -313,7 +325,10 @@ class ZiniAlgo {
 			   cls++;
 			}
 		 }
-		 cls += chaincount(state, mines, pl.hide_val, chorded);
+		 if(firstmove_open)
+			cls += chaincount(state, mines, pl.hide_val, chorded, {x, y});
+		 else
+			cls += chaincount(state, mines, pl.hide_val, chorded);
 		 for (int i = 1; i <= state.rows; ++i)
 			for (int j = 1; j <= state.cols; ++j)
 			   if (pl.board.board[i][j] == GameState::Cell::H && mines.dist[i][j] == false)
@@ -327,5 +342,9 @@ class ZiniAlgo {
 		 }
 	  }
 	  return { global_cls, bbv };
+   }
+   int ZiniDelta(const GameState& state, const 地雷排布& mines, unsigned long long& seed, int x, int y, int itr = 10) {
+	  // 这东西很慢，不推荐使用，仅仅作为样例展示应该如何使用 ChainZini 来计算某一步的 zne 增量（如果强迫性地在这个格子上做出正确的操作的话）。
+	  return ChainZini<true>(state, mines, seed, itr, x, y).Zini - ChainZini<false>(state, mines, seed, itr).Zini;
    }
 };

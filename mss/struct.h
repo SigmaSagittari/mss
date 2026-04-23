@@ -20,6 +20,7 @@
 #include "basic.h"
 
 
+
 class 连通块构造 {
    private:
    const GameState* state = nullptr;

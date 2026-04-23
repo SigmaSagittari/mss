@@ -93,11 +93,19 @@ int main() {
       cerr << endl;
    }
 
-   ZiniAlgo zini ;
-   Zini结果 res = zini.ChainZini(gs, pa, seed);
+   ZiniAlgo zini;
+   Zini结果 res = zini.ChainZini<false>(gs, pa, seed , 10000);
    cerr << res.bbbv << ' ' << res.Zini << endl; 
 
-   for (int i = 1; i <= 10000; ++i) {
-      res = zini.ChainZini(gs, pa, seed);
+   for (int i = 1; i <= R; ++i) {
+      for (int j = 1; j <= C; ++j) {
+         if (pa.dist[i][j] == false) {
+            Zini结果 tmp_res = zini.ChainZini<true>(gs, pa, seed, 10000 / R / C, i, j);
+            cerr << setw(2) << res.Zini - tmp_res.Zini << ' ';
+
+         }
+         else cerr << setw(2) << "##" << ' ';
+      }
+      cerr << endl;
    }
 }
