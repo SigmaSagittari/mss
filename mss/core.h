@@ -131,11 +131,21 @@ struct 高ZNE版面结果 {
 };
 
 struct ZNR计算结果 {
-   struct 单个格子结果 {
+   struct 操作 {
 	  int x, y; // 坐标
-	  array<bool,8> fl; // 周围八个格子的标雷情况，按照从上到下从左到右的顺序排列。
+	  array<array<bool, 3>, 3> fl; // 周围八个格子的标雷情况
+	  bool operator<(const 操作& other) const { // map 要用
+		 if (x != other.x) return x < other.x;
+		 if (y != other.y) return y < other.y;
+		 return fl < other.fl;
+	  }
+   };
+   struct 单个格子结果 {
+	  操作 operation; // 这个格子的操作
 	  long double probability; // **如果标雷正确**，这个操作是 Zini 的概率。需要结合 ZNE 版面结果进行判定
 	  // 例如，一个操作可能拥有 100% 的 probability，但是实际上是因为这个雷排列极其稀有，所以这个操作其实是很差的。
+	  int cnt; // 这个操作出现的次数，主要用于调试和分析，看看哪些操作是高概率的，哪些是低概率的。
    };
    vector<单个格子结果> ZNR; // 每个"操作"是 Zini 的概率
+   高ZNE版面结果 ZNE_result;
 };

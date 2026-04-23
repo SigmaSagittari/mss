@@ -82,30 +82,44 @@ int main() {
    }
 
 
-   //AnalysisCache cache(gs);
    unsigned long long seed = 18075243459941470590;
-   // 地雷排布 pa 已由输入指定; 不再用随机生成
 
-   for (int i = 1; i <= R; ++i) {
-      for (int j = 1; j <= C; ++j) {
-         cerr << ".#"[pa.dist[i][j]];
-      }
-      cerr << endl;
+
+   // 由用户输入 znereq 和 cls，调用 AnalysisCache 的 get_ZNR 并格式化输出
+   long double znereq = 0.0;
+   int cls = 0;
+   if (!(cin >> znereq >> cls)) {
+      cerr << "No znereq and cls provided, exiting." << endl;
+      return 0;
    }
 
-   ZiniAlgo zini;
-   Zini结果 res = zini.ChainZini<false>(gs, pa, seed , 10000);
-   cerr << res.bbbv << ' ' << res.Zini << endl; 
+   AnalysisCache cache(gs);
+   ZNR计算结果 znr = cache.get_ZNR(seed, znereq, cls);
 
+   // 输出 ZNE 版面统计
+   cout << "ZNE版面数量: " << znr.ZNE_result.count << '\n';
+   cout << fixed << setprecision(4);
+   cout << "ZNE 版面平均地雷概率分布:\n";
    for (int i = 1; i <= R; ++i) {
       for (int j = 1; j <= C; ++j) {
-         if (pa.dist[i][j] == false) {
-            Zini结果 tmp_res = zini.ChainZini<true>(gs, pa, seed, 10000 / R / C, i, j);
-            cerr << setw(2) << res.Zini - tmp_res.Zini << ' ';
-
-         }
-         else cerr << setw(2) << "##" << ' ';
+         cout << setw(8) << znr.ZNE_result.dist.probability[i][j] << ' ';
       }
-      cerr << endl;
+      cout << '\n';
+   }
+
+   // 输出每个 ZNR 操作及其概率
+   cout << "\nZNR 操作列表 (坐标 x,y ; 周围标记矩阵 3x3 ; probability):\n";
+   for (const auto& item : znr.ZNR) {
+      const auto& op = item.operation;
+      cout << "(" << op.x << "," << op.y << ") ";
+      // 输出周围 3x3 标记，按行
+      for (int dx = 0; dx < 3; ++dx) {
+         for (int dy = 0; dy < 3; ++dy) {
+            cout << (op.fl[dx][dy] ? '#' : '.');
+         }
+         if (dx < 2) cout << ";";
+      }
+      cout << "  ";
+      cout << item.cnt << "项 中 的 概率: " << item.probability << '\n';
    }
 }

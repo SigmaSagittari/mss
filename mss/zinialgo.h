@@ -343,7 +343,7 @@ class ZiniAlgo {
 	  }
 	  return { global_cls, bbv };
    }
-   int ZiniDelta(const GameState& state, const 地雷排布& mines, unsigned long long& seed, int x, int y, int itr = 10) {
+   int ZiniDelta(const GameState& state, const 地雷排布& mines, unsigned long long& seed, int x, int y, int itr = 20) {
 	  // 这东西很慢，不推荐使用，仅仅作为样例展示应该如何使用 ChainZini 来计算某一步的 zne 增量（如果强迫性地在这个格子上做出正确的操作的话）。
 	  return ChainZini<true>(state, mines, seed, itr, x, y).Zini - ChainZini<false>(state, mines, seed, itr).Zini;
    }
