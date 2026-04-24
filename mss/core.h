@@ -45,15 +45,20 @@ inline bool isdigit(GameState::Cell c) {
 }
 
 template<typename Func>
-void for_each_adjacent(int x, int y, int rows, int cols, Func&& func) {
-   for (int i = -1; i <= 1; ++i) {
-	  for (int j = -1; j <= 1; ++j) {
-		 int nx = x + i, ny = y + j;
-		 if ((i != 0 || j != 0) && 1 <= nx && nx <= rows && 1 <= ny && ny <= cols) {
-			func(nx, ny);
-		 }
-	  }
-   }
+inline void for_each_adjacent(int x, int y, int rows, int cols, Func&& func) {
+   bool up = x > 1;
+   bool down = x < rows;
+   bool left = y > 1;
+   bool right = y < cols;
+
+   if (up && left) func(x - 1, y - 1);
+   if (up) func(x - 1, y);
+   if (up && right) func(x - 1, y + 1);
+   if (left) func(x, y - 1);
+   if (right) func(x, y + 1);
+   if (down && left) func(x + 1, y - 1);
+   if (down) func(x + 1, y);
+   if (down && right) func(x + 1, y + 1);
 }
 
 // ==================== 推理结果 ====================

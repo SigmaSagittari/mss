@@ -29,16 +29,29 @@ using namespace std;
 
 void test() {
    GameState gs(9, 9, 10);
-   for(int i=1;i<=9;++i)
-      for(int j=1;j<=9;++j)
-		 gs.board[i][j] = GameState::Cell::H;
-    AnalysisCache cache(gs);
-    unsigned long long seed = 18075243459941470590;
-    for (int i = 1; i <= 1000000; ++i) {
-       地雷排布 t = cache.genRandom(seed);
-       auto res = ZiniAlgo().ChainZini<false>(gs, t, seed);
-       volatile auto tmp = res;
-    }
+   for (int i = 1; i <= 9; ++i)
+      for (int j = 1; j <= 9; ++j)
+         gs.board[i][j] = GameState::Cell::H;
+
+   AnalysisCache cache(gs);
+   unsigned long long seed = 18075243459941470590;
+   unsigned long long result = 0;
+
+   auto start = chrono::high_resolution_clock::now();
+
+   for (int i = 1; i <= 1000000; ++i) {
+      地雷排布 t = cache.genRandom(seed);
+      auto res = ZiniAlgo().ChainZini<false>(gs, t, seed);
+      volatile auto tmp = res;
+      result = splitmix64(result + (unsigned long long) tmp.Zini * i);
+   }
+
+   auto end = chrono::high_resolution_clock::now();
+   auto duration = chrono::duration_cast<chrono::milliseconds>(end - start);
+
+   cout << "Test completed, result: " << result << endl;
+   cout << "Should be " << 297168476658979658 << endl;
+   cout << "Time: " << duration.count() / 1000.0 << " seconds" << endl;
 }
 
 int main() {

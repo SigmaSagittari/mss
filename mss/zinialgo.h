@@ -22,12 +22,21 @@ using namespace std;
 #include "core.h"
 
 class ZiniAlgo {
-   public:
+   private:
+   struct zero_tile_information {
+	  // 保存空格子的信息，避免反复 dfs 带来的性能损失。
+	  vector<pair<int, int>> tiles; // 空格子（和临空位）的列表
+	  vector<pair<int, int>> opening_interval; // oi[x] 表示 x 号 opening 对应 tiles[oi[x].first ~ oi[x].second] 这段区间的格子（含两端）
+	  vector<vector<int>> opening_id; // opening_id[i][j] 表示这个格子属于哪个 opening，0 表示不属于任何 opening
+	  int openings = 0; // 空的数量
+
+	  // 这个类暂时不启用，会在下一个更新被用到。
+   };
    struct player {
 	  GameState board;
-	  地雷排布 mines;
-	  vector<vector<int>> hide_val, priority;
-	  vector<vector<bool>> bbv, vis;
+	  const 地雷排布& mines;
+	  thread_local inline static vector<vector<int>> hide_val, priority;
+	  thread_local inline static vector<vector<bool>> bbv, vis;
 	  // hide_val 表示打开这个格子之后，会显示什么数字？（不要打开地雷）
 	  // opening_id 表示这个格子的归属地
 	  // bbv 表示这个格子是否是油水（空不是 bbbv）
@@ -35,33 +44,83 @@ class ZiniAlgo {
 	  // 优先级计算方法：打开之后 chord 能赚多少个油水（或者空），优先级就是多少
 	  struct check_info {
 		 vector<pair<int, int>> check_priority[10];
-		 int maximum = 0;
+		 int maximum = 0, stack_top[10] = {};
 		 void insert(int x, int y, int p, unsigned long long& seed) {
 			if (p >= 0) {
-			   check_priority[p].push_back({ x, y });
+			   //cerr << stack_top[p] << ' ' << check_priority[p].size() << ' ' << p << endl;
+			   check_priority[p][stack_top[p]] = { x, y };
 			   maximum = max(maximum, p);
-			   swap(check_priority[p].back(), check_priority[p][seed % check_priority[p].size()]);
+			   swap(check_priority[p][stack_top[p]], check_priority[p][seed % (stack_top[p] + 1)]);
 			   seed = splitmix64(seed);
+			   stack_top[p]++;
 			}
 		 }
-	  } check;
+		 pair<int, int> pop_best(unsigned long long& seed) {
+			for (int i = maximum; i >= 0; --i) {
+			   while (stack_top[i] > 0) {
+				  pair<int, int> res = check_priority[i][--stack_top[i]];
+				  if (priority[res.first][res.second] == i)
+					 return res;
+				  insert(res.first, res.second, priority[res.first][res.second], seed);
+
+			   }
+			   maximum = i - 1;
+			}
+			return { -1, -1 };
+		 }
+	  };
+	  thread_local inline static check_info check;
 	  int openings;
-	  void opening_tile_dfs(int x, int y, int id) {
-		 vis[x][y] = true;
-		 for_each_adjacent(x, y, board.rows, board.cols, [&](int nx, int ny) {
-			if (vis[nx][ny] == false && hide_val[nx][ny] == 0) opening_tile_dfs(nx, ny, id);
-		 });
+	  void opening_tile_dfs(int start_x, int start_y, int id, zero_tile_information& zt_info) {
+		 vector<pair<int, int>> st;
+		 st.push_back({ start_x, start_y });
+		 vis[start_x][start_y] = true;
+
+		 while (!st.empty()) {
+			auto [x, y] = st.back();
+			st.pop_back();
+
+			for_each_adjacent(x, y, board.rows, board.cols, [&](int nx, int ny) {
+			   if (!vis[nx][ny] && hide_val[nx][ny] == 0) {
+				  vis[nx][ny] = true;
+				  st.push_back({ nx, ny });
+			   }
+			});
+		 }
 	  }
-	  player(const GameState& state, const 地雷排布& mines, unsigned long long& seed)
+	  player(const GameState& state, const 地雷排布& mines, unsigned long long& seed, zero_tile_information& zt_info)
 		 : board(state)
 		 , mines(mines)
-		 , hide_val(state.rows + 1, vector<int>(state.cols + 1, 0))
-		 , priority(state.rows + 1, vector<int>(state.cols + 1, 0))
-		 , bbv(state.rows + 1, vector<bool>(state.cols + 1, true))
 		 , openings(0) {
-		 for (int i = 0; i <= 9; ++i) {
-			check.check_priority[i].clear();
-			check.check_priority[i].reserve((long long)state.rows * state.cols);
+		 check.maximum = 0;
+		 if (hide_val.size() != state.rows + 1 || hide_val[0].size() != state.cols + 1) {
+			hide_val = vector<vector<int>>(state.rows + 1, vector<int>(state.cols + 1, 0));
+			priority = vector<vector<int>>(state.rows + 1, vector<int>(state.cols + 1, 0));
+			bbv = vector<vector<bool>>(state.rows + 1, vector<bool>(state.cols + 1, true));
+			vis = vector<vector<bool>>(state.rows + 1, vector<bool>(state.cols + 1, false));
+			zt_info.opening_id = vector<vector<int>>(state.rows + 1, vector<int>(state.cols + 1, 0));
+			zt_info.opening_interval = vector<pair<int, int>>(state.rows * state.cols + 1, pair<int, int>{0, 0});
+			zt_info.tiles = vector<pair<int, int>>(state.rows * state.cols * 2 + 1, pair<int, int>{0, 0});
+			for (int i = 0; i <= 9; ++i) {
+			   check.check_priority[i] = vector<pair<int, int>>(state.rows * state.cols * 8, pair<int, int>{0, 0});
+			   check.stack_top[i] = 0;
+			}
+		 }
+		 else {
+			for (int i = 1; i <= state.rows; ++i)
+			   for (int j = 1; j <= state.cols; ++j) {
+				  hide_val[i][j] = 0;
+				  priority[i][j] = 0;
+				  bbv[i][j] = true;
+				  vis[i][j] = false;
+				  zt_info.opening_id[i][j] = 0;
+			   }
+			for (int i = 0; i <= state.rows * state.cols; ++i)
+			   zt_info.opening_interval[i] = pair<int, int>{ 0,0 };
+			for(int i=0;i<=state.rows*state.cols*2;++i)
+			   zt_info.tiles[i] = pair<int, int>{ 0,0 };
+			for (int i = 0; i <= 9; ++i)
+			   check.stack_top[i] = 0;
 		 }
 		 for (int i = 1; i <= state.rows; ++i)
 			for (int j = 1; j <= state.cols; ++j)
@@ -71,13 +130,12 @@ class ZiniAlgo {
 				  });
 				  bbv[i][j] = false;
 			   }
-		 vis = vector<vector<bool>>(state.rows + 1, vector<bool>(state.cols + 1, false));
 		 for (int i = 1; i <= state.rows; ++i)
 			for (int j = 1; j <= state.cols; ++j) {
 			   if (mines.dist[i][j] == true) continue;
 			   if (hide_val[i][j] == 0 && vis[i][j] == false) {
 				  openings++;
-				  opening_tile_dfs(i, j, openings);
+				  opening_tile_dfs(i, j, openings, zt_info);
 			   }
 			   if (hide_val[i][j] == 0) {
 				  bbv[i][j] = false;
@@ -115,21 +173,32 @@ class ZiniAlgo {
 			for (int j = 1; j <= state.cols; ++j)
 			   check.insert(i, j, priority[i][j], seed);
 	  }
-	  void open_dfs(int x, int y) {
-		 if (vis[x][y]) return;
-		 vis[x][y] = true;
-		 if (hide_val[x][y] != 0) {
-			if (board.board[x][y] == GameState::Cell::H)
-			   board.board[x][y] = static_cast<GameState::Cell>(hide_val[x][y]);
-			else
-			   priority[x][y]--;
-		 }
-		 else {
-			priority[x][y] = -10000;
-			board.board[x][y] = GameState::Cell::N0;
-			for_each_adjacent(x, y, board.rows, board.cols, [&](int nx, int ny) {
-			   open_dfs(nx, ny);
-			});
+	  void open_dfs(int start_x, int start_y) {
+		 vector<pair<int, int>> st;
+		 st.push_back({ start_x, start_y });
+
+		 while (!st.empty()) {
+			auto [x, y] = st.back();
+			st.pop_back();
+
+			if (vis[x][y]) continue;
+			vis[x][y] = true;
+
+			if (hide_val[x][y] != 0) {
+			   if (board.board[x][y] == GameState::Cell::H)
+				  board.board[x][y] = static_cast<GameState::Cell>(hide_val[x][y]);
+			   else
+				  priority[x][y]--;
+			}
+			else {
+			   priority[x][y] = -10000;
+			   board.board[x][y] = GameState::Cell::N0;
+			   for_each_adjacent(x, y, board.rows, board.cols, [&](int nx, int ny) {
+				  if (!vis[nx][ny]) {
+					 st.push_back({ nx, ny });
+				  }
+			   });
+			}
 		 }
 	  }
 	  void open(int x, int y, unsigned long long& seed) {
@@ -168,30 +237,36 @@ class ZiniAlgo {
 		 priority[x][y] = -10000; // 人不能两次 chord 同一个格子
 	  }
 	  pair<int, int> pop_best(unsigned long long& seed) {
-		 for (int i = check.maximum; i >= 0; --i) {
-			while (!check.check_priority[i].empty()) {
-			   pair<int, int> res = check.check_priority[i].back();
-			   check.check_priority[i].pop_back();
-			   if (priority[res.first][res.second] == i)
-				  return res;
-			   check.insert(res.first, res.second, priority[res.first][res.second], seed);
-
-			}
-			check.maximum = i - 1;
-		 }
-		 return { -1, -1 };
+		 return check.pop_best(seed);
 	  }
    };
-   int chaincount(const GameState& state, const 地雷排布& mines, const vector<vector<int>>& hide_val, const vector<vector<bool>>& chorded, pair<int,int> fixedplay = {0,0}) {
+   int chaincount(const GameState& state, const 地雷排布& mines, const vector<vector<int>>& hide_val, const vector<vector<bool>>& chorded, pair<int, int> fixedplay = { 0,0 }) {
 	  int R = state.rows, C = state.cols;
-	  vector<vector<int>> id(R + 1, vector<int>(C + 1, -1));
+	  static vector<vector<int>> id;
+	  static vector < vector<bool>> vis;
+	  static vector<int> parent, rnk;
+	  if (id.size() != R + 1 || id[0].size() != C + 1) {
+		 id = vector<vector<int>>(R + 1, vector<int>(C + 1, -1));
+		 vis = vector < vector<bool>>(R + 1, vector<bool>(C + 1, false));
+		 parent = vector<int>(R * C + 1, 0);
+		 rnk = vector<int>(R * C + 1, 0);
+	  }
+	  else {
+		 for (int i = 1; i <= R; ++i)
+			for (int j = 1; j <= C; ++j) {
+			   id[i][j] = -1;
+			   vis[i][j] = false;
+			}
+	  }
 	  int nid = 0;
 	  for (int i = 1; i <= R; ++i)
 		 for (int j = 1; j <= C; ++j)
 			if (chorded[i][j]) id[i][j] = nid++;
 	  if (nid == 0) return 0;
-	  vector<int> parent(nid), rnk(nid, 0);
-	  for (int i = 0; i < nid; ++i) parent[i] = i;
+	  for (int i = 0; i < nid; ++i) {
+		 parent[i] = i;
+		 rnk[i] = 0;
+	  }
 	  function<int(int)> find = [&](int x) {
 		 return parent[x] == x ? x : parent[x] = find(parent[x]);
 	  };
@@ -214,45 +289,30 @@ class ZiniAlgo {
 			}
 		 }
 	  }
-	  vector<vector<char>> vis(R + 1, vector<char>(C + 1, 0));
-	  auto dfs_zero = [&](int si, int sj) {
-		 vector<pair<int, int>> st;
-		 st.reserve(64);
-		 st.push_back({ si, sj });
-		 vis[si][sj] = 1;
-		 int fa_id = -1;
-		 for (size_t p = 0; p < st.size(); ++p) {
-			int x = st[p].first, y = st[p].second;
-			// for this zero cell, connect any chorded neighbor to fa_id
-			for (int dx = -1; dx <= 1; ++dx) for (int dy = -1; dy <= 1; ++dy) {
-			   int nx = x + dx, ny = y + dy;
-			   if (nx >= 1 && nx <= R && ny >= 1 && ny <= C) {
-				  int cid = id[nx][ny];
-				  if (cid != -1) {
-					 if (fa_id == -1) {
-						fa_id = cid;
-					 }
-					 else {
-						unite(fa_id, cid);
-					 }
-				  }
-			   }
-			}
-			// expand region to neighboring zero cells
-			for (int dx = -1; dx <= 1; ++dx) for (int dy = -1; dy <= 1; ++dy) {
-			   if (dx == 0 && dy == 0) continue;
-			   int nx = x + dx, ny = y + dy;
-			   if (nx >= 1 && nx <= R && ny >= 1 && ny <= C && !vis[nx][ny] && hide_val[nx][ny] == 0 && mines.dist[nx][ny] == false) {
-				  vis[nx][ny] = 1;
-				  st.push_back({ nx, ny });
-			   }
-			}
-		 }
-	  };
-
 	  for (int i = 1; i <= R; ++i) {
 		 for (int j = 1; j <= C; ++j) {
-			if (hide_val[i][j] == 0 && mines.dist[i][j] == false && !vis[i][j]) dfs_zero(i, j);
+			if (hide_val[i][j] == 0 && !vis[i][j] && !mines.dist[i][j]) {
+			   vector<pair<int, int>> st;
+			   st.reserve(64);
+			   st.push_back({ i, j });
+			   vis[i][j] = 1;
+			   int fa_id = -1;
+			   for (size_t p = 0; p < st.size(); ++p) {
+				  int x = st[p].first, y = st[p].second;
+				  for_each_adjacent(x, y, R, C, [&](int nx, int ny) {
+					 int cid = id[nx][ny];
+					 if (cid != -1) {
+						if (fa_id == -1)
+						   fa_id = cid;
+						else unite(fa_id, cid);
+					 }
+					 if (!vis[nx][ny] && hide_val[nx][ny] == 0 && !mines.dist[nx][ny]) {
+						vis[nx][ny] = 1;
+						st.push_back({ nx,ny });
+					 }
+				  });
+			   }
+			}
 		 }
 	  }
 
@@ -278,7 +338,7 @@ class ZiniAlgo {
 		 bool is_valid = true;
 		 for (auto& p : cells) {
 			int i = p.first, j = p.second;
-			if (state.board[i][j] != GameState::Cell::H || pair<int,int> {i,j} == fixedplay) {
+			if (state.board[i][j] != GameState::Cell::H || pair<int, int> {i, j} == fixedplay) {
 			   is_valid = false;
 			   break; // one is enough
 			}
@@ -293,8 +353,9 @@ class ZiniAlgo {
    template<bool fixedplay>
    Zini结果 ChainZini(const GameState& state, const 地雷排布& mines, unsigned long long& seed, int itr = 1, int x = 0, int y = 0) {
 	  int global_cls = 2147483647, bbv = 0;
+	  static zero_tile_information zt_info;
 	  for (int i = 1; i <= itr; ++i) {
-		 player pl(state, mines, seed);
+		 player pl(state, mines, seed, zt_info);
 		 int cls = 0;
 		 bool firstmove_open = false;
 		 if constexpr (fixedplay)
@@ -327,8 +388,8 @@ class ZiniAlgo {
 			   cls++;
 			}
 		 }
-		 if(firstmove_open)
-			cls += chaincount(state, mines, pl.hide_val, chorded, {x, y});
+		 if (firstmove_open)
+			cls += chaincount(state, mines, pl.hide_val, chorded, { x, y });
 		 else
 			cls += chaincount(state, mines, pl.hide_val, chorded);
 		 for (int i = 1; i <= state.rows; ++i)
