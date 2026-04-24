@@ -30,7 +30,7 @@ struct GameState {
    };
 
    vector<vector<Cell>> board;    // 当前盘面
-   vector<vector<bool>> flags;     // 旗帜标记
+   vector<vector<bool>> flags;    // 旗帜标记
    int rows, cols, total_mines;
 
    GameState(int r, int c, int m) : rows(r), cols(c), total_mines(m) {

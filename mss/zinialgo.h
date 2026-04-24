@@ -86,7 +86,9 @@ class ZiniAlgo {
 				  });
 			   }
 			}
-		 vis = vector<vector<bool>>(state.rows + 1, vector<bool>(state.cols + 1, false));
+		 for (int i = 1; i <= state.rows; ++i)
+			for (int j = 1; j <= state.cols; ++j)
+			   vis[i][j] = false;
 		 for (int i = 1; i <= state.rows; ++i)
 			for (int j = 1; j <= state.cols; ++j) {
 			   if (mines.dist[i][j] == true)

@@ -27,8 +27,23 @@ using namespace std;
 #include "ioealgo.h"       // 包含 ioe 算法的实现
 #include "analysiscache.h" // 管理分析结果的缓存，避免重复计算，一键导入上下文
 
+void test() {
+   GameState gs(9, 9, 10);
+   for(int i=1;i<=9;++i)
+      for(int j=1;j<=9;++j)
+		 gs.board[i][j] = GameState::Cell::H;
+    AnalysisCache cache(gs);
+    unsigned long long seed = 18075243459941470590;
+    for (int i = 1; i <= 1000000; ++i) {
+       地雷排布 t = cache.genRandom(seed);
+       auto res = ZiniAlgo().ChainZini<false>(gs, t, seed);
+       volatile auto tmp = res;
+    }
+}
 
 int main() {
+   test();
+   return 0;
    int n, m, mines; char t;
    if (!(cin >> m >> t >> n >> t >> mines)) return 0;
 
