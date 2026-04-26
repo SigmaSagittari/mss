@@ -66,7 +66,7 @@ class AnalysisCache {
    高ZNE版面结果 get_highZNE(unsigned long long& seed, long double znereq, int cls, int algo_itr, int zini_itr = 20) {
 	  return ioealgo().get_highZNE(*state_, get_基础逻辑结果(), get_棋盘结构(), get_地雷分布(true), get_高级分析结果(), seed, znereq, cls, algo_itr, zini_itr);
    }
-   ZNR计算结果 get_ZNR(unsigned long long& seed, long double znereq, int cls, int algo_itr = 100000, int zini_itr = 20) {
-	  return ioealgo().get_ZNR(*state_, get_基础逻辑结果(), get_棋盘结构(), get_地雷分布(true), get_高级分析结果(), seed, znereq, cls, algo_itr, zini_itr);
+   ZNR计算结果 get_ZNR(unsigned long long& seed, long double znereq, int cls, bool 加权 = true, int algo_itr = 100000, int zini_itr = 20) {
+	  return ioealgo().get_ZNR(*state_, get_基础逻辑结果(), get_棋盘结构(), get_地雷分布(true), get_高级分析结果(), seed, znereq, cls, 加权, algo_itr, zini_itr);
    }
 };

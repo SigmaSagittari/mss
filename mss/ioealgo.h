@@ -100,7 +100,7 @@ class ioealgo {
 	  return result;
    }
    ZNR计算结果 get_ZNR(const GameState& state, const 基础逻辑结果& basic, const 棋盘结构& structure, const vector<连通块地雷分布>& mine_distrube, const 高级分析结果& advanced
-				   , unsigned long long& seed, long double znereq, int cls, int algo_itr = 10000, int zini_itr = 20) {
+				   , unsigned long long& seed, long double znereq, int cls, bool 加权 = false, int algo_itr = 10000, int zini_itr = 20) {
 	  ZNR计算结果 result;
 	  map<ZNR计算结果::操作, pair<int,long double>> operation_prob; // 统计每个操作的概率，pair<int,longdouble> 表示 {计数, 概率}
 	  result.ZNE_result.dist.probability = vector<vector<long double>>(state.rows + 1, vector<long double>(state.cols + 1, 0.0));
@@ -113,7 +113,7 @@ class ioealgo {
 		 for (int i = 1; i <= state.rows; ++i)
 			for (int j = 1; j <= state.cols; ++j) {
 			   if (playable[i][j]) {
-				  int deltares = zinires.Zini - ZiniAlgo().ChainZini<true>(state, dist, seed, zini_itr, i, j).Zini;
+				  auto Zinires = ZiniAlgo().ChainZini<true>(state, dist, seed, zini_itr, i, j);
 				  array<array<bool, 3>, 3> fl = {};
 				  if (state.board[i][j] != GameState::Cell::H) { // 已经打开的格子，周围八个格子的标雷情况
 					 for (int dx = -1; dx <= 1; ++dx)
@@ -127,14 +127,16 @@ class ioealgo {
 				  } // 没打开的格子，只要单击就行，不需要考虑标雷
 				  auto& t = operation_prob[{i, j, fl}];
 				  t.first ++;
-				  t.second += deltares; // 计数和累计 zne 增益
+				  if (加权) t.second += pow(2, ((long double)Zinires.bbbv / (Zinires.Zini + cls)) / 0.05); // 计数和累计 zne 增益
+				  else t.second += zinires.Zini - Zinires.Zini;
 			   }
 			}
 	  };
 	  highZNE_inside(callback, state, basic, structure, mine_distrube, advanced, seed, znereq, cls, algo_itr, zini_itr);
 	  for (auto& kv : operation_prob)
 		 if (kv.second.first != 0) {
-			kv.second.second /= kv.second.first;
+			if(加权) kv.second.second = log(kv.second.second) - log(pow(2, znereq / 0.05)); // 计算得分
+			else kv.second.second /= kv.second.first; // 计算平均 ZNE 概率
 			result.ZNR.push_back({ kv.first, kv.second.second, kv.second.first });
 		 }
 	  for (int i = 1; i <= state.rows; ++i)

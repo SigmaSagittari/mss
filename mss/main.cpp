@@ -39,7 +39,7 @@ void test() {
 
    auto start = chrono::high_resolution_clock::now();
 
-   for (int i = 1; i <= 10000000; ++i) { //  一百万
+   for (int i = 1; i <= 1000000; ++i) { //  一百万
       unsigned long long seed = i;
       地雷排布 t = cache.genRandom(seed);
       auto res = ZiniAlgo().ChainZini<false>(gs, t, seed);
@@ -151,6 +151,6 @@ int main() {
          if (dx < 2) cout << ";";
       }
       cout << "  ";
-      cout << item.cnt << "项 中 的 概率: " << item.probability << '\n';
+      cout << item.cnt << "项 中 的 权重: " << item.weight << '\n';
    }
 }
