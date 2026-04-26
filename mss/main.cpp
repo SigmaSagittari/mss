@@ -44,7 +44,6 @@ void test() {
       地雷排布 t = cache.genRandom(seed);
       auto res = ZiniAlgo().ChainZini<false>(gs, t, seed);
       volatile auto tmp = res;
-      //cerr << tmp.Zini << ' ' << tmp.bbbv << endl;
       result = splitmix64(result + (unsigned long long) tmp.Zini * i);
    }
 

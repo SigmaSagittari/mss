@@ -48,7 +48,6 @@ class ZiniAlgo {
 		 int maximum = 0, stack_top[10] = {};
 		 void insert(int x, int y, int p, unsigned long long& seed) {
 			if (p >= 0) {
-			   //cerr << stack_top[p] << ' ' << check_priority[p].size() << ' ' << p << endl;
 			   check_priority[p][stack_top[p]] = { x, y };
 			   maximum = max(maximum, p);
 			   swap(check_priority[p][stack_top[p]], check_priority[p][seed % (stack_top[p] + 1)]);
@@ -73,7 +72,6 @@ class ZiniAlgo {
 	  thread_local inline static check_info check;
 	  void opening_tile_dfs(int start_x, int start_y, zero_tile_information& zt_info) { // 对 zero_tile_info 的初始化，虽然这里有些在 player 初始化没有用到，但是在 chainZini 会用到。
 		 zt_info.openings++;
-		 //cerr << "NEW OPENING : " << start_x << ' ' << start_y << endl;
 		 int itr = zt_info.openings == 1 ? 0 : zt_info.opening_interval[zt_info.openings - 2].second + 1;
 		 // 新 opening 的起始位置，如果是第一个 opening 就从 0 开始，否则从上一个 opening 的结束位置的下一个位置开始
 
@@ -84,7 +82,6 @@ class ZiniAlgo {
 
 		 while (itr < zt_info.tilestop) {
 			auto [x, y] = zt_info.tiles[itr];
-			//cerr << "NEW : " << '(' << x << ',' << y << ')' << endl;
 			itr++;
 			if (hide_val[x][y] == 0) { // 只对 0 进行扩张，空的边缘的会加入 opening 但是不进行扩张。
 			   zt_info.opening_id[x][y] = zt_info.openings - 1;
