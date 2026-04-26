@@ -14,6 +14,8 @@
 #include <limits>
 #include <functional>
 #include <bit>
+#include <thread>
+#include <mutex>
 
 bool GLOBAL_DEBUG = false;
 
@@ -57,8 +59,67 @@ void test() {
    
 }
 
+void test_multithread() {
+   const int N = 9;
+   const int M = 9;
+   const int MINES = 10;
+   const long long ITERATIONS = 100000000;
+   const unsigned int NUM_THREADS = 6;
+
+   GameState gs(N, M, MINES);
+   for (int i = 1; i <= N; ++i)
+      for (int j = 1; j <= M; ++j)
+         gs.board[i][j] = GameState::Cell::H;
+
+   map<pair<int, int>, long long> cnt;
+   mutex mtx;
+
+   auto start = chrono::high_resolution_clock::now();
+
+   auto worker = [&](unsigned long long start_seed, unsigned long long end_seed) {
+      AnalysisCache cache(gs);
+      map<pair<int, int>, long long> local;
+
+      for (unsigned long long i = start_seed; i < end_seed; ++i) {
+         unsigned long long seed = i;  // 关键：每次重新赋值，传副本进去
+         auto t = cache.genRandom(seed);
+         auto res = ZiniAlgo().ChainZini<false>(gs, t, seed);
+         local[{res.Zini, res.bbbv}]++;
+      }
+
+      lock_guard<mutex> lock(mtx);
+      for (auto& [key, val] : local) {
+         cnt[key] += val;
+      }
+   };
+
+   vector<thread> threads;
+   unsigned long long step = ITERATIONS / NUM_THREADS;
+   for (unsigned int i = 0; i < NUM_THREADS; ++i) {
+      unsigned long long start = i * step + 1;
+      unsigned long long end = (i == NUM_THREADS - 1) ? ITERATIONS + 1 : (i + 1) * step + 1;
+      threads.emplace_back(worker, start, end);
+   }
+
+   for (auto& th : threads) {
+      th.join();
+   }
+
+   auto end = chrono::high_resolution_clock::now();
+   auto duration = chrono::duration_cast<chrono::milliseconds>(end - start);
+
+   long long total = 0;
+   for (auto& [key, val] : cnt) {
+      cout << key.first << ' ' << key.second << ' ' << val << endl;
+      total += val;
+   }
+
+   cout << "Total iterations: " << total << endl;
+   cout << "Time: " << duration.count() / 1000.0 << " seconds" << endl;
+}
+
 int main() {
-   //test();
+   //test_multithread();
    //return 0;
    int n, m, mines; char t;
    if (!(cin >> m >> t >> n >> t >> mines)) return 0;
