@@ -37,6 +37,9 @@ struct GameState {
 	  board = vector<vector<Cell>>(r + 1, vector<Cell>(c + 1, Cell::H));
 	  flags = vector<vector<bool>>(r + 1, vector<bool>(c + 1, false));
    }
+   GameState() {
+	  rows = cols = total_mines = 0;
+   }
 };
 
 inline bool isdigit(GameState::Cell c) {

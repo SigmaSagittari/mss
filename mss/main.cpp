@@ -15,6 +15,7 @@
 #include <functional>
 #include <bit>
 
+bool GLOBAL_DEBUG = false;
 
 using namespace std;
 
@@ -34,15 +35,16 @@ void test() {
          gs.board[i][j] = GameState::Cell::H;
 
    AnalysisCache cache(gs);
-   unsigned long long seed = 18075243459941470590;
    unsigned long long result = 0;
 
    auto start = chrono::high_resolution_clock::now();
 
-   for (int i = 1; i <= 1000000; ++i) {
+   for (int i = 1; i <= 1000000; ++i) { //  一百万
+      unsigned long long seed = i;
       地雷排布 t = cache.genRandom(seed);
       auto res = ZiniAlgo().ChainZini<false>(gs, t, seed);
       volatile auto tmp = res;
+      //cerr << tmp.Zini << ' ' << tmp.bbbv << endl;
       result = splitmix64(result + (unsigned long long) tmp.Zini * i);
    }
 
@@ -50,8 +52,10 @@ void test() {
    auto duration = chrono::duration_cast<chrono::milliseconds>(end - start);
 
    cout << "Test completed, result: " << result << endl;
-   cout << "Should be " << 297168476658979658 << endl;
+   cout << "Should be " << 6734981085506469534 << endl;
    cout << "Time: " << duration.count() / 1000.0 << " seconds" << endl;
+
+   
 }
 
 int main() {
@@ -122,7 +126,7 @@ int main() {
    }
 
    AnalysisCache cache(gs);
-   ZNR计算结果 znr = cache.get_ZNR(seed, znereq, cls);
+   ZNR计算结果 znr = cache.get_ZNR(seed, znereq, cls , 100);
 
    // 输出 ZNE 版面统计
    cout << "ZNE版面数量: " << znr.ZNE_result.count << '\n';
@@ -134,7 +138,7 @@ int main() {
       }
       cout << '\n';
    }
-
+   return 0;
    // 输出每个 ZNR 操作及其概率
    cout << "\nZNR 操作列表 (坐标 x,y ; 周围标记矩阵 3x3 ; probability):\n";
    for (const auto& item : znr.ZNR) {

@@ -33,6 +33,7 @@ class ioealgo {
 				, unsigned long long& seed, long double znereq, int cls, int algo_itr, int zini_itr = 10) {
 	  // znereq 表示至少期待的 zne 的要求，cls 表示已经进行的点击次数，itr 表示计算 zini 时的迭代次数，迭代次数越高越准确但越慢。
 	  for (int i = 1; i <= algo_itr; ++i) {
+		 //cerr << "# " << i << "DONE" << endl;
 		 地雷排布 dist = 概率分析().gen_random(state, basic, structure, mine_distrube, seed); // 生成一个随机分布，作为 zini 的输入。
 		 Zini结果 zinires = ZiniAlgo().ChainZini<false>(state, dist, seed, 1);
 		 if ((long double)zinires.bbbv / (zinires.Zini + cls) < znereq * 0.8) continue; // 如果单次迭代的 zne 过低，说明这个随机分布不具有代表性，直接丢弃。 0.8 随便写的，平时基本 0.9 都不会出岔子，但是为了保险起见，降低一点要求。
