@@ -27,7 +27,7 @@ using namespace std;
 #include "ioealgo.h"
 
 class AnalysisCache {
-   private:
+   public:
    unique_ptr<GameState> state_;
    unique_ptr<基础逻辑结果> basic_;
    unique_ptr<棋盘结构> structure_;
@@ -49,11 +49,11 @@ class AnalysisCache {
 	  return *dists_[deep];
    }
    const 高级分析结果& get_高级分析结果() {
-	  if (!advanced_) advanced_ = make_unique<高级分析结果>(概率分析().analysis(*state_, get_基础逻辑结果(), get_棋盘结构(), get_地雷分布(true)));
+	  if (!advanced_) advanced_ = make_unique<高级分析结果>(概率分析().analysis(*state_, get_基础逻辑结果(), get_棋盘结构(), get_地雷分布(false)));
 	  return *advanced_;
    }
    const 地雷概率& get_地雷概率() {
-	  if (!probability_) probability_ = make_unique<地雷概率>(概率分析().transfer(*state_, get_基础逻辑结果(), get_棋盘结构(), get_地雷分布(true), get_高级分析结果()));
+	  if (!probability_) probability_ = make_unique<地雷概率>(概率分析().transfer(*state_, get_基础逻辑结果(), get_棋盘结构(), get_地雷分布(false), get_高级分析结果()));
 	  return *probability_;
    }
    地雷排布 genRandom(unsigned long long& seed) {
@@ -64,9 +64,9 @@ class AnalysisCache {
 	  概率分析().all_distrubte(*state_, get_基础逻辑结果(), get_棋盘结构(), get_地雷分布(true), callback);
    }
    高ZNE版面结果 get_highZNE(unsigned long long& seed, long double znereq, int cls, int algo_itr, int zini_itr = 20) {
-	  return ioealgo().get_highZNE(*state_, get_基础逻辑结果(), get_棋盘结构(), get_地雷分布(true), seed, znereq, cls, algo_itr, zini_itr);
+	  return ioealgo().get_highZNE(*state_, get_基础逻辑结果(), get_棋盘结构(), get_地雷分布(true), get_高级分析结果(), seed, znereq, cls, algo_itr, zini_itr);
    }
    ZNR计算结果 get_ZNR(unsigned long long& seed, long double znereq, int cls, int algo_itr = 100000, int zini_itr = 20) {
-	  return ioealgo().get_ZNR(*state_, get_基础逻辑结果(), get_棋盘结构(), get_地雷分布(true), seed, znereq, cls, algo_itr, zini_itr);
+	  return ioealgo().get_ZNR(*state_, get_基础逻辑结果(), get_棋盘结构(), get_地雷分布(true), get_高级分析结果(), seed, znereq, cls, algo_itr, zini_itr);
    }
 };

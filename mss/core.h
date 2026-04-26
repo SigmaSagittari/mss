@@ -134,7 +134,7 @@ struct Zini结果 {
 };
 
 struct 高ZNE版面结果 {
-   int count = 0; // 满足条件的版面数量
+   int count = 0, total = 0; // 满足条件的版面数量，和总计尝试的版面数量
    地雷概率 dist;
 };
 

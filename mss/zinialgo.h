@@ -251,7 +251,7 @@ class ZiniAlgo {
 	  }
    };
    int chaincount_new(const GameState& state, const vector<pair<int,int>>& chorded ,const zero_tile_information& zt_info, pair<int,int> fixedplay={0,0}) {
-	  static vector<vector<pair<int,int>>> fa;
+	  thread_local static vector<vector<pair<int,int>>> fa;
 	  if (fa.empty() || (int)fa.size() != state.rows+1 || (int)fa[0].size() != state.cols+1) {
 		 fa = vector<vector<pair<int,int>>>(state.rows+1, vector<pair<int,int>>(state.cols+1, {-1, -1}));
 	  }
@@ -309,7 +309,7 @@ class ZiniAlgo {
    template<bool fixedplay>
    Zini结果 ChainZini(const GameState& state, const 地雷排布& mines, unsigned long long& seed, int itr = 1, int x = 0, int y = 0) {
 	  int global_cls = 2147483647, bbv = 0;
-	  static vector<pair<int, int>> chord_new;
+	  thread_local static vector<pair<int, int>> chord_new;
 	  chord_new.reserve(state.cols * state.rows + 1);
 	  for (int i = 1; i <= itr; ++i) {
 		 player pl(state, mines, seed);

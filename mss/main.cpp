@@ -39,7 +39,7 @@ void test() {
 
    auto start = chrono::high_resolution_clock::now();
 
-   for (int i = 1; i <= 1000000; ++i) { //  一百万
+   for (int i = 1; i <= 10000000; ++i) { //  一百万
       unsigned long long seed = i;
       地雷排布 t = cache.genRandom(seed);
       auto res = ZiniAlgo().ChainZini<false>(gs, t, seed);
@@ -58,8 +58,8 @@ void test() {
 }
 
 int main() {
-   test();
-   return 0;
+   //test();
+   //return 0;
    int n, m, mines; char t;
    if (!(cin >> m >> t >> n >> t >> mines)) return 0;
 
@@ -125,10 +125,11 @@ int main() {
    }
 
    AnalysisCache cache(gs);
-   ZNR计算结果 znr = cache.get_ZNR(seed, znereq, cls , 100);
+
+   ZNR计算结果 znr = cache.get_ZNR(seed, znereq, cls);
 
    // 输出 ZNE 版面统计
-   cout << "ZNE版面数量: " << znr.ZNE_result.count << '\n';
+   cout << "ZNE版面数量: " << znr.ZNE_result.count << " in All " << znr.ZNE_result.total << "maps (" << (long double)znr.ZNE_result.count / znr.ZNE_result.total * 100 << "%)" << '\n';
    cout << fixed << setprecision(4);
    cout << "ZNE 版面平均地雷概率分布:\n";
    for (int i = 1; i <= R; ++i) {
@@ -137,7 +138,6 @@ int main() {
       }
       cout << '\n';
    }
-   return 0;
    // 输出每个 ZNR 操作及其概率
    cout << "\nZNR 操作列表 (坐标 x,y ; 周围标记矩阵 3x3 ; probability):\n";
    for (const auto& item : znr.ZNR) {

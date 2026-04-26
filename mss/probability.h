@@ -348,7 +348,8 @@ class 概率分析 {
 	  }
 	  return result;
    }
-   void all_distrubte(const GameState& state, const 基础逻辑结果& basic, const 棋盘结构& structure, const vector<连通块地雷分布>& connect_distributions, void (*callback)(const 地雷概率&)) {
+   template<typename Callback>
+   void all_distrubte(const GameState& state, const 基础逻辑结果& basic, const 棋盘结构& structure, const vector<连通块地雷分布>& connect_distributions, Callback callback) {
 	  // 此函数会枚举所有可能的局面，并对每个局面调用一次 callback。会指数爆炸而且我没有判断输入是否合法，所以用的时候记得判一下，免得整个程序卡死。
 	  // Determine remaining mines and Tsum (non-frontier hidden cells)
 	  int mines = state.total_mines;
@@ -368,7 +369,7 @@ class 概率分析 {
 			   Tcells.emplace_back(i, j);
 
 	  // helper to enumerate combinations of k positions out of given positions and mark them in prob
-	  auto enum_choose_positions = [&](auto&& self, const vector<pair<int, int>>& positions, int start, int need, 地雷概率& prob, auto&& on_complete) -> void {
+	  auto enum_choose_positions = [&](auto&& self, const vector<pair<int, int>>& positions, int start, int need, 地雷排布& prob, auto&& on_complete) -> void {
 		 if (need == 0) {
 			on_complete();
 			return;
@@ -376,9 +377,9 @@ class 概率分析 {
 		 int n = (int)positions.size();
 		 for (int i = start; i <= n - need; ++i) {
 			auto p = positions[i];
-			prob.probability[p.first][p.second] = 1.0L;
+			prob.dist[p.first][p.second] = true;
 			self(self, positions, i + 1, need - 1, prob, on_complete);
-			prob.probability[p.first][p.second] = 0.0L;
+			prob.dist[p.first][p.second] = false;
 		 }
 	  };
 
@@ -402,15 +403,14 @@ class 概率分析 {
 		 }
 
 		 // recursive over blocks
-		 地雷概率 prob_template;
-		 prob_template.probability = vector<vector<long double>>(state.rows + 1, vector<long double>(state.cols + 1, 0.0L));
+		 地雷排布 prob_template;
+		 prob_template.dist = vector<vector<bool>>(state.rows + 1, vector<bool>(state.cols + 1, false));
 		 // mark basic M as 1.0 and S as 0.0 (optional); we'll leave revealed numbers as 0
 		 for (int i = 1; i <= state.rows; ++i)
 			for (int j = 1; j <= state.cols; ++j)
-			   if (basic.marks[i][j] == 基础逻辑结果::Mark::M) prob_template.probability[i][j] = 1.0L;
-
+			   if (basic.marks[i][j] == 基础逻辑结果::Mark::M) prob_template.dist[i][j] = true;
 		 // recursive over blocks and their deep assignments
-		 function<void(int, 地雷概率&)> dfs_block = [&](int bi, 地雷概率& cur_prob) {
+		 function<void(int, 地雷排布&)> dfs_block = [&](int bi, 地雷排布& cur_prob) {
 			if (bi == blocks) {
 			   // handle T cells selection: choose rse.Tcell_minecount among Tcells
 			   int k = rse.Tcell_minecount;
@@ -428,7 +428,7 @@ class 概率分析 {
 			for (const auto& poss : deep) {
 			   const vector<char>& assignment = poss.assignment;
 			   // enumerate placements inside boxes of this block
-			   地雷概率 copy_prob = cur_prob; // copy current state
+			   地雷排布 copy_prob = cur_prob; // copy current state
 			   const auto& boxes = structure.board_struct[bi].单位格们;
 
 			   function<void(int)> dfs_box = [&](int boxi) {
@@ -451,7 +451,7 @@ class 概率分析 {
 			}
 		 };
 
-		 地雷概率 start_prob = prob_template;
+		 地雷排布 start_prob = prob_template;
 		 dfs_block(0, start_prob);
 	  };
 

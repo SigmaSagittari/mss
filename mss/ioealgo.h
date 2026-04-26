@@ -29,9 +29,20 @@ using namespace std;
 class ioealgo {
    private:
    template<typename callback>
-   void highZNE_inside(const callback&cb, const GameState& state, const 基础逻辑结果& basic, const 棋盘结构& structure, const vector<连通块地雷分布>& mine_distrube
+   void highZNE_inside(const callback&cb, const GameState& state, const 基础逻辑结果& basic, const 棋盘结构& structure, const vector<连通块地雷分布>& mine_distrube, const 高级分析结果& advanced
 				, unsigned long long& seed, long double znereq, int cls, int algo_itr, int zini_itr = 10) {
 	  // znereq 表示至少期待的 zne 的要求，cls 表示已经进行的点击次数，itr 表示计算 zini 时的迭代次数，迭代次数越高越准确但越慢。
+	  if (advanced.candidates <= algo_itr) { // 当候选方案足够少，直接遍历
+		 auto callback_wrapper = [&](const 地雷排布& dist) {
+			Zini结果 zinires = ZiniAlgo().ChainZini<false>(state, dist, seed, 1);
+			if ((long double)zinires.bbbv / (zinires.Zini + cls) < znereq * 0.8) return; // 如果单次迭代的 zne 过低，说明这个随机分布不具有代表性，直接丢弃。 0.8 随便写的，平时基本 0.9 都不会出岔子，但是为了保险起见，降低一点要求。
+			zinires = ZiniAlgo().ChainZini<false>(state, dist, seed, zini_itr); // 计算这个分布的 zne，迭代次数较高以获得更准确的结果。
+			if ((long double)zinires.bbbv / (zinires.Zini + cls) < znereq)  return;
+			cb(dist, zinires);
+		 };
+		 概率分析().all_distrubte(state, basic, structure, mine_distrube, callback_wrapper);
+		 return;
+	  }
 	  for (int i = 1; i <= algo_itr; ++i) {
 		 地雷排布 dist = 概率分析().gen_random(state, basic, structure, mine_distrube, seed); // 生成一个随机分布，作为 zini 的输入。
 		 Zini结果 zinires = ZiniAlgo().ChainZini<false>(state, dist, seed, 1);
@@ -69,7 +80,7 @@ class ioealgo {
 	  return playable;
    }
    public:
-   高ZNE版面结果 get_highZNE(const GameState& state, const 基础逻辑结果& basic, const 棋盘结构& structure, const vector<连通块地雷分布>& mine_distrube
+   高ZNE版面结果 get_highZNE(const GameState& state, const 基础逻辑结果& basic, const 棋盘结构& structure, const vector<连通块地雷分布>& mine_distrube, const 高级分析结果& advanced
 					, unsigned long long& seed, long double znereq, int cls, int algo_itr, int zini_itr = 20) {
 	  高ZNE版面结果 result;
 	  result.dist.probability = vector<vector<long double>>(state.rows + 1, vector<long double>(state.cols + 1, 0.0));
@@ -79,13 +90,14 @@ class ioealgo {
 			for (int j = 1; j <= state.cols; ++j)
 			   if (dist.dist[i][j]) result.dist.probability[i][j] += 1.0; // 计数
 	  };
-	  highZNE_inside(callback, state, basic, structure, mine_distrube, seed, znereq, cls, algo_itr, zini_itr);
+	  highZNE_inside(callback, state, basic, structure, mine_distrube, advanced, seed, znereq, cls, algo_itr, zini_itr);
 	  for(int i=1;i<=state.rows;++i)
 		 for (int j = 1; j <= state.cols; ++j)
 			result.dist.probability[i][j] /= result.count; // 归一化概率
+	  result.total = (int) min((long double)algo_itr, advanced.candidates);
 	  return result;
    }
-   ZNR计算结果 get_ZNR(const GameState& state, const 基础逻辑结果& basic, const 棋盘结构& structure, const vector<连通块地雷分布>& mine_distrube
+   ZNR计算结果 get_ZNR(const GameState& state, const 基础逻辑结果& basic, const 棋盘结构& structure, const vector<连通块地雷分布>& mine_distrube, const 高级分析结果& advanced
 				   , unsigned long long& seed, long double znereq, int cls, int algo_itr = 10000, int zini_itr = 20) {
 	  ZNR计算结果 result;
 	  map<ZNR计算结果::操作, pair<int,long double>> operation_prob; // 统计每个操作的概率，pair<int,longdouble> 表示 {计数, 概率}
@@ -117,7 +129,7 @@ class ioealgo {
 			   }
 			}
 	  };
-	  highZNE_inside(callback, state, basic, structure, mine_distrube, seed, znereq, cls, algo_itr, zini_itr);
+	  highZNE_inside(callback, state, basic, structure, mine_distrube, advanced, seed, znereq, cls, algo_itr, zini_itr);
 	  for (auto& kv : operation_prob)
 		 if (kv.second.first != 0) {
 			kv.second.second /= kv.second.first;
@@ -126,6 +138,7 @@ class ioealgo {
 	  for (int i = 1; i <= state.rows; ++i)
 		 for (int j = 1; j <= state.cols; ++j)
 			result.ZNE_result.dist.probability[i][j] /= result.ZNE_result.count; // 归一化概率
+	  result.ZNE_result.total = (int)min((long double)algo_itr, advanced.candidates);
 	  return result;
    }
 };
