@@ -353,7 +353,7 @@ class 概率分析 {
 	  // 此函数会枚举所有可能的局面，并对每个局面调用一次 callback。会指数爆炸而且我没有判断输入是否合法，所以用的时候记得判一下，免得整个程序卡死。
 	  // Determine remaining mines and Tsum (non-frontier hidden cells)
 	  int mines = state.total_mines;
-	  int Tsum = 0;
+	  int Tsum = 0, result_num = 0;
 	  for (int i = 1; i <= state.rows; ++i) {
 		 for (int j = 1; j <= state.cols; ++j) {
 			if (basic.marks[i][j] == 基础逻辑结果::Mark::M) mines--;
@@ -416,10 +416,11 @@ class 概率分析 {
 			   int k = rse.Tcell_minecount;
 			   if (k == 0) {
 				  callback(cur_prob);
+				  result_num++;
 				  return;
 			   }
 			   // enumerate combinations of Tcells
-			   enum_choose_positions(enum_choose_positions, Tcells, 0, k, cur_prob, [&]() { callback(cur_prob); });
+			   enum_choose_positions(enum_choose_positions, Tcells, 0, k, cur_prob, [&]() { callback(cur_prob); result_num++; });
 			   return;
 			}
 
@@ -455,7 +456,10 @@ class 概率分析 {
 		 dfs_block(0, start_prob);
 	  };
 
+
 	  // call distribution enumerator with computed mines and Tsum
 	  all_distrubte_inside(connect_distributions, mines, Tsum, tmp_function);
+
+	  assert(result_num == static_cast<int>(denominator(full_gf_poly(connect_distributions), mines, Tsum)));
    }
 };

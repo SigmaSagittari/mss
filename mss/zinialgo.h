@@ -326,6 +326,7 @@ class ZiniAlgo {
 			pair<int, int> best = pl.pop_best(seed);
 			if constexpr (fixedplay)
 			   if (state.board[x][y] != GameState::Cell::H && loop == 1) { // 强迫第一步，如果不需要打开，说明应该被 chord
+				  pl.check.insert(best.first, best.second, pl.priority[best.first][best.second], seed); // 忘记插入回去了……
 				  best = pair<int, int>{ x, y }; // 狸猫换太子，强迫性地 chord 这个格子
 			   }
 			if (best == pair<int, int> {-1, -1}) break;

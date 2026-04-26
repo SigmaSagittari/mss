@@ -41,6 +41,8 @@ class ioealgo {
 			cb(dist, zinires);
 		 };
 		 概率分析().all_distrubte(state, basic, structure, mine_distrube, callback_wrapper);
+		 // 如果是遍历所有分布的话，不可以根据 ZNR 来丢弃某个候选操作，因为有偏，大部分雷有可能会聚在一起导致出现问题，所以如果枚举的话，一定要全算一遍。
+		 // 你都能遍历了，就没有必要吝啬那点时间分析操作了吧，直接全算一遍就好了。
 		 return;
 	  }
 	  for (int i = 1; i <= algo_itr; ++i) {
