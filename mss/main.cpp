@@ -17,7 +17,6 @@
 #include <thread>
 #include <mutex>
 
-bool GLOBAL_DEBUG = false;
 
 using namespace std;
 
@@ -57,6 +56,49 @@ void test() {
    cout << "Time: " << duration.count() / 1000.0 << " seconds" << endl;
 
    
+}
+void test__() {
+   GameState gs(6, 6, 5);
+   for (int i = 1; i <= 6; ++i)
+      for (int j = 1; j <= 6; ++j)
+         gs.board[i][j] = GameState::Cell::H;
+
+   AnalysisCache cache(gs);
+   unsigned long long result = 0;
+
+   map<pair<int, int>, int> cnt;
+
+   auto start = chrono::high_resolution_clock::now();
+
+   unsigned long long seed = 1;
+
+   cache.all_distrubte([&](const 地雷排布& t) {
+      auto res = ZiniAlgo().ChainZini<false>(gs, t, seed, 10);
+      volatile auto tmp = res;
+	  cnt[{res.Zini, res.bbbv}]++;
+      if (1.0 * res.bbbv / res.Zini > 2.27) {
+		 cerr << "[board] " << endl;
+         for (int i = 1; i <= 6; ++i) {
+            for (int j = 1; j <= 6; ++j)
+            {
+               if (t.dist[i][j]) cerr << 'M';
+               else cerr << 'H';
+            }
+            cerr << endl;
+
+         }
+      }
+   });
+
+   auto end = chrono::high_resolution_clock::now();
+   auto duration = chrono::duration_cast<chrono::milliseconds>(end - start);
+
+   for(auto i:cnt)
+	  cout << i.first.first << ',' << i.first.second << ':' << i.second << '(' << 1.0 * i.first.second / i.first.first * 100  << "%)" << endl;
+
+   cout << "Time: " << duration.count() / 1000.0 << " seconds" << endl;
+
+
 }
 
 void test_multithread() {
@@ -119,7 +161,7 @@ void test_multithread() {
 }
 
 int main() {
-   //test_multithread();
+   //test__();
    //return 0;
    int n, m, mines; char t;
    if (!(cin >> m >> t >> n >> t >> mines)) return 0;

@@ -31,7 +31,7 @@ class 概率分析 {
 	  vector<连通块结果> full_result; // 每个连通块对应一个结果
 	  int Tcell_minecount = 0; // 非前沿是地雷的数量
    };
-   inline static vector<long double> log_fact; // 阶乘对数
+   inline thread_local static vector<long double> log_fact; // 阶乘对数
    static void combi_init(int n) {
 	  if (log_fact.empty()) log_fact.push_back(0.0);
 	  while ((int)log_fact.size() <= n + 1)
@@ -460,6 +460,6 @@ class 概率分析 {
 	  // call distribution enumerator with computed mines and Tsum
 	  all_distrubte_inside(connect_distributions, mines, Tsum, tmp_function);
 
-	  assert(result_num == static_cast<int>(denominator(full_gf_poly(connect_distributions), mines, Tsum)));
+	  assert(result_num == round(denominator(full_gf_poly(connect_distributions), mines, Tsum)));
    }
 };

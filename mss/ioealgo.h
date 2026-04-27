@@ -96,7 +96,7 @@ class ioealgo {
 	  for(int i=1;i<=state.rows;++i)
 		 for (int j = 1; j <= state.cols; ++j)
 			result.dist.probability[i][j] /= result.count; // 归一化概率
-	  result.total = (int) min((long double)algo_itr, advanced.candidates);
+	  result.total = (int) round(min((long double)algo_itr, advanced.candidates));
 	  return result;
    }
    ZNR计算结果 get_ZNR(const GameState& state, const 基础逻辑结果& basic, const 棋盘结构& structure, const vector<连通块地雷分布>& mine_distrube, const 高级分析结果& advanced
@@ -142,7 +142,7 @@ class ioealgo {
 	  for (int i = 1; i <= state.rows; ++i)
 		 for (int j = 1; j <= state.cols; ++j)
 			result.ZNE_result.dist.probability[i][j] /= result.ZNE_result.count; // 归一化概率
-	  result.ZNE_result.total = (int)min((long double)algo_itr, advanced.candidates);
+	  result.ZNE_result.total = (int) round(min((long double)algo_itr, advanced.candidates));
 	  return result;
    }
 };
