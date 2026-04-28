@@ -229,7 +229,7 @@ int main() {
 
    AnalysisCache cache(gs);
 
-   ZNR计算结果 znr = cache.get_ZNR(seed, znereq, cls);
+   ZNR计算结果 znr = cache.get_ZNR_new(seed, znereq, cls);
 
    // 输出 ZNE 版面统计
    cout << "ZNE版面数量: " << znr.ZNE_result.count << " in All " << znr.ZNE_result.total << "maps (" << (long double)znr.ZNE_result.count / znr.ZNE_result.total * 100 << "%)" << '\n';
@@ -241,8 +241,12 @@ int main() {
       }
       cout << '\n';
    }
+
    // 输出每个 ZNR 操作及其概率
-   cout << "\nZNR 操作列表 (坐标 x,y ; 周围标记矩阵 3x3 ; probability):\n";
+   cout << "\nZNR 操作列表 (坐标 x,y ; 周围标记矩阵 3x3 ; weight):\n";
+   stable_sort(znr.ZNR.begin(), znr.ZNR.end(), [](const auto& a, const auto& b) {
+      return a.weight > b.weight;
+   }); // 排序
    for (const auto& item : znr.ZNR) {
       const auto& op = item.operation;
       cout << "(" << op.x << "," << op.y << ") ";
@@ -254,6 +258,6 @@ int main() {
          if (dx < 2) cout << ";";
       }
       cout << "  ";
-      cout << item.cnt << "项 中 的 权重: " << item.weight << '\n';
+      cout << "的 权重: " << item.weight << '\n';
    }
 }
