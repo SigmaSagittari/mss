@@ -35,7 +35,7 @@ class ioealgo {
 	  if (advanced.candidates <= algo_itr) { // 当候选方案足够少，直接遍历
 		 auto callback_wrapper = [&](const 地雷排布& dist) {
 			Zini结果 zinires = ZiniAlgo().ChainZini<false>(state, dist, seed, 1);
-			if ((long double)zinires.bbbv / (zinires.Zini + cls) < znereq * 0.8) return; // 如果单次迭代的 zne 过低，说明这个随机分布不具有代表性，直接丢弃。 0.8 随便写的，平时基本 0.9 都不会出岔子，但是为了保险起见，降低一点要求。
+			if ((long double)zinires.bbbv / (zinires.Zini + cls) < znereq * 0.85) return; // 如果单次迭代的 zne 过低，说明这个随机分布不具有代表性，直接丢弃。 经过一百万盘的测试，0.85 不会丢弃任何盘面。
 			zinires = ZiniAlgo().ChainZini<false>(state, dist, seed, zini_itr); // 计算这个分布的 zne，迭代次数较高以获得更准确的结果。
 			if ((long double)zinires.bbbv / (zinires.Zini + cls) < znereq)  return;
 			//cerr << (zinires.bbbv + 0.0) / (zinires.Zini + cls) * 100 << "%" << endl;
@@ -44,15 +44,19 @@ class ioealgo {
 		 概率分析().all_distrubte(state, basic, structure, mine_distrube, callback_wrapper);
 		 return;
 	  }
+	  int zini_count = 0;
 	  for (int i = 1; i <= algo_itr; ++i) {
 		 unsigned long long seed_used = seed;
 		 地雷排布 dist = 概率分析().gen_random(state, basic, structure, mine_distrube, seed); // 生成一个随机分布，作为 zini 的输入。
 		 Zini结果 zinires = ZiniAlgo().ChainZini<false>(state, dist, seed, 1);
+		 zini_count++;
 		 if ((long double)zinires.bbbv / (zinires.Zini + cls) < znereq * 0.8) continue; // 如果单次迭代的 zne 过低，说明这个随机分布不具有代表性，直接丢弃。 0.8 随便写的，平时基本 0.9 都不会出岔子，但是为了保险起见，降低一点要求。
 		 zinires = ZiniAlgo().ChainZini<false>(state, dist, seed, zini_itr); // 计算这个分布的 zne，迭代次数较高以获得更准确的结果。
+		 zini_count += zini_itr;
 		 if ((long double)zinires.bbbv / (zinires.Zini + cls) < znereq)  continue;
 		 cb(dist, zinires);
 	  }
+	  cerr << "Zini 计算完成，一共进行了 " << zini_count << " 次迭代。" << endl;
    }
    vector<vector<bool>> potential_playable(const GameState& state, const 地雷排布& dist) {
 	  vector<vector<bool>> playable(state.rows + 1, vector<bool>(state.cols + 1, false));
@@ -162,7 +166,6 @@ class ioealgo {
 		 all_results.push_back({ dist, zinires });
 	  };
 	  highZNE_inside(callback, state, basic, structure, mine_distrube, advanced, seed, znereq, cls, algo_itr, zini_itr);
-	  cerr << "生成盘面结束……共 " << all_results.size() << " 个盘面满足要求。" << endl;
 	  stable_sort(all_results.begin(), all_results.end(), [&](const auto& a, const auto& b) {return (a.second.bbbv * 1.0) / (a.second.Zini + cls) > (b.second.bbbv * 1.0) / (b.second.Zini + cls); });
 
 	  vector<long double> weight_suffix(all_results.size() + 1, 0.0);
