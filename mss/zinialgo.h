@@ -250,7 +250,7 @@ class ZiniAlgo {
 		 return check.pop_best(seed);
 	  }
    };
-   int chaincount_new(const GameState& state, const vector<pair<int,int>>& chorded ,const zero_tile_information& zt_info, pair<int,int> fixedplay={0,0}) {
+   int chaincount_new(const GameState& state, const vector<pair<int,int>>& chorded ,const zero_tile_information& zt_info) {
 	  thread_local static vector<vector<pair<int,int>>> fa;
 	  if (fa.empty() || (int)fa.size() != state.rows+1 || (int)fa[0].size() != state.cols+1) {
 		 fa = vector<vector<pair<int,int>>>(state.rows+1, vector<pair<int,int>>(state.cols+1, {-1, -1}));
@@ -291,7 +291,7 @@ class ZiniAlgo {
 	  for (const pair<int, int>& i : chorded) {
 		 pair<int, int> root = getfa(i);
 		 long long root_key = root.first * (state.cols + 1LL) + root.second; // 将 root 转换为一个 long long 以便用作 unordered_map 的 key
-		 if (i == fixedplay || state.board[i.first][i.second] != GameState::Cell::H)
+		 if (state.board[i.first][i.second] != GameState::Cell::H)
 			result_map[root_key] = -1; // 这个连通块永远暴毙
 		 else if(result_map[root_key]!=-1)
 			result_map[root_key] = 1; // 初始化为 1，表示这个连通块还可以存活
@@ -306,8 +306,7 @@ class ZiniAlgo {
 	  return cnt;
    }
    public:
-   template<bool fixedplay>
-   Zini结果 ChainZini(const GameState& state, const 地雷排布& mines, unsigned long long& seed, int itr = 1, int x = 0, int y = 0) {
+   Zini结果 ChainZini(const GameState& state, const 地雷排布& mines, unsigned long long& seed, int itr = 1) {
 	  int global_cls = 2147483647, bbv = 0;
 	  thread_local static vector<pair<int, int>> chord_new;
 	  chord_new.reserve(state.cols * state.rows + 1);
@@ -316,19 +315,8 @@ class ZiniAlgo {
 		 int cls = 0;
 		 chord_new.clear();
 		 bool firstmove_open = false;
-		 if constexpr (fixedplay)
-			if (state.board[x][y] == GameState::Cell::H && pl.hide_val[x][y] != 0) { // 强迫性地做第一步，如果是需要打开的格子那就打开
-			   pl.open(x, y, seed);
-			   cls++;
-			   firstmove_open = true;
-			}
 		 for (int loop = 1;; ++loop) {
 			pair<int, int> best = pl.pop_best(seed);
-			if constexpr (fixedplay)
-			   if (state.board[x][y] != GameState::Cell::H && loop == 1) { // 强迫第一步，如果不需要打开，说明应该被 chord
-				  pl.check.insert(best.first, best.second, pl.priority[best.first][best.second], seed); // 忘记插入回去了……
-				  best = pair<int, int>{ x, y }; // 狸猫换太子，强迫性地 chord 这个格子
-			   }
 			if (best == pair<int, int> {-1, -1}) break;
 			if (pl.board.board[best.first][best.second] == GameState::Cell::H) { // 没打开就打开
 			   pl.open(best.first, best.second, seed);
@@ -347,7 +335,7 @@ class ZiniAlgo {
 			}
 		 }
 		 if (firstmove_open) {
-			int new_val = chaincount_new(state, chord_new, pl.zt_info, { x,y });
+			int new_val = chaincount_new(state, chord_new, pl.zt_info);
 			cls += new_val;
 		 }
 		 else {
@@ -368,8 +356,42 @@ class ZiniAlgo {
 	  }
 	  return { global_cls, bbv };
    }
-   int ZiniDelta(const GameState& state, const 地雷排布& mines, unsigned long long& seed, int x, int y, int itr = 20) {
-	  // 这东西很慢，不推荐使用，仅仅作为样例展示应该如何使用 ChainZini 来计算某一步的 zne 增量（如果强迫性地在这个格子上做出正确的操作的话）。
-	  return ChainZini<true>(state, mines, seed, itr, x, y).Zini - ChainZini<false>(state, mines, seed, itr).Zini;
+   Zini结果 ChainZini_fixed(const GameState& state, const 地雷排布& mines, unsigned long long& seed, int itr = 1, int x = 0, int y = 0) {
+	  GameState state_copy = state; // 实在是懒得处理 ChainZini_fixed 的 const 引用问题了，直接复制一份吧，不然全是 bug。
+
+	  auto open = [&](int x, int y, auto&& self) -> void {
+		 if (mines.dist[x][y] == true) return; // 不能打开地雷
+		 int val = 0;
+		 for_each_adjacent(x, y, state_copy.rows, state_copy.cols, [&](int nx, int ny) {
+			if (mines.dist[nx][ny] == true) val++;
+		 });
+		 state_copy.board[x][y] = static_cast<GameState::Cell>(val);
+		 if(val == 0)
+			for_each_adjacent(x, y, state_copy.rows, state_copy.cols, [&](int nx, int ny) {
+			   if (state_copy.board[nx][ny] == GameState::Cell::H) {
+				  self(nx, ny, self);
+			   }
+		 });
+	  };
+	  int extra_cls = 0;
+	  if (state_copy.board[x][y] == GameState::Cell::H) {
+		 extra_cls++;
+		 open(x, y, open);
+	  }
+	  else {
+		 extra_cls++;
+		 for_each_adjacent(x, y, state_copy.rows, state_copy.cols, [&](int nx, int ny) {
+			if (mines.dist[nx][ny] == true && state_copy.flags[nx][ny] == false) {
+			   extra_cls++;
+			   state_copy.flags[nx][ny] = true;
+			}
+			if (state_copy.board[nx][ny] == GameState::Cell::H)
+			   open(nx, ny, open);
+		 });
+	  }
+	  Zini结果 res = ChainZini(state_copy, mines, seed, itr);
+	  res.Zini += extra_cls;
+	  return res;
    }
+
 }; 

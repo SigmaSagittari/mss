@@ -43,7 +43,7 @@ void 初级Zini测试() {
    for (int i = 1; i <= 1000000; ++i) { //  一百万
       unsigned long long seed = i;
       地雷排布 t = cache.genRandom(seed);
-      auto res = ZiniAlgo().ChainZini<false>(gs, t, seed);
+      auto res = ZiniAlgo().ChainZini(gs, t, seed);
       volatile auto tmp = res;
       result = splitmix64(result + (unsigned long long) tmp.Zini * i);
    }
@@ -72,7 +72,7 @@ void 中级Zini测试() {
    for (int i = 1; i <= 1000000; ++i) { //  一百万
       unsigned long long seed = i;
       地雷排布 t = cache.genRandom(seed);
-      auto res2 = ZiniAlgo().ChainZini<false>(gs, t, seed, 10);
+      auto res2 = ZiniAlgo().ChainZini(gs, t, seed, 10);
 	  cnt[{res2.Zini, res2.bbbv}]++;
       if (i % 10000 == 0) cerr << "# " << i << "DONE" << endl;
    }
@@ -116,7 +116,7 @@ void 多线程Zini测试() {
       for (unsigned long long i = start_seed; i < end_seed; ++i) {
          unsigned long long seed = i;  // 关键：每次重新赋值，传副本进去
          auto t = cache.genRandom(seed);
-         auto res = ZiniAlgo().ChainZini<false>(gs, t, seed, 8);
+         auto res = ZiniAlgo().ChainZini(gs, t, seed, 8);
          local[{res.Zini, res.bbbv}]++;
       }
 

@@ -34,9 +34,9 @@ class ioealgo {
 			 // znereq 表示至少期待的 zne 的要求，cls 表示已经进行的点击次数，itr 表示计算 zini 时的迭代次数，迭代次数越高越准确但越慢。
 	  if (advanced.candidates <= algo_itr) { // 当候选方案足够少，直接遍历
 		 auto callback_wrapper = [&](const 地雷排布& dist) {
-			Zini结果 zinires = ZiniAlgo().ChainZini<false>(state, dist, seed, 1);
+			Zini结果 zinires = ZiniAlgo().ChainZini(state, dist, seed, 1);
 			if ((long double)zinires.bbbv / (zinires.Zini + cls) < znereq * 0.85) return; // 如果单次迭代的 zne 过低，说明这个随机分布不具有代表性，直接丢弃。 经过一百万盘的测试，0.85 不会丢弃任何盘面。
-			zinires = ZiniAlgo().ChainZini<false>(state, dist, seed, zini_itr); // 计算这个分布的 zne，迭代次数较高以获得更准确的结果。
+			zinires = ZiniAlgo().ChainZini(state, dist, seed, zini_itr); // 计算这个分布的 zne，迭代次数较高以获得更准确的结果。
 			if ((long double)zinires.bbbv / (zinires.Zini + cls) < znereq)  return;
 			//cerr << (zinires.bbbv + 0.0) / (zinires.Zini + cls) * 100 << "%" << endl;
 			cb(dist, zinires);
@@ -48,10 +48,10 @@ class ioealgo {
 	  for (int i = 1; i <= algo_itr; ++i) {
 		 unsigned long long seed_used = seed;
 		 地雷排布 dist = 概率分析().gen_random(state, basic, structure, mine_distrube, seed); // 生成一个随机分布，作为 zini 的输入。
-		 Zini结果 zinires = ZiniAlgo().ChainZini<false>(state, dist, seed, 1);
+		 Zini结果 zinires = ZiniAlgo().ChainZini(state, dist, seed, 1);
 		 zini_count++;
 		 if ((long double)zinires.bbbv / (zinires.Zini + cls) < znereq * 0.8) continue; // 如果单次迭代的 zne 过低，说明这个随机分布不具有代表性，直接丢弃。 0.8 随便写的，平时基本 0.9 都不会出岔子，但是为了保险起见，降低一点要求。
-		 zinires = ZiniAlgo().ChainZini<false>(state, dist, seed, zini_itr); // 计算这个分布的 zne，迭代次数较高以获得更准确的结果。
+		 zinires = ZiniAlgo().ChainZini(state, dist, seed, zini_itr); // 计算这个分布的 zne，迭代次数较高以获得更准确的结果。
 		 zini_count += zini_itr;
 		 if ((long double)zinires.bbbv / (zinires.Zini + cls) < znereq)  continue;
 		 cb(dist, zinires);
@@ -100,7 +100,7 @@ class ioealgo {
 		 for (int i = 1; i <= state.rows; ++i)
 			for (int j = 1; j <= state.cols; ++j) {
 			   if (playable[i][j]) {
-				  auto Zinires = ZiniAlgo().ChainZini<true>(state, dist, seed, zini_itr, i, j);
+				  auto Zinires = ZiniAlgo().ChainZini_fixed(state, dist, seed, zini_itr, i, j);
 				  array<array<bool, 3>, 3> fl = {};
 				  if (state.board[i][j] != GameState::Cell::H) { // 已经打开的格子，周围八个格子的标雷情况
 					 for (int dx = -1; dx <= 1; ++dx)
@@ -202,7 +202,9 @@ class ioealgo {
 				  operation_weight_sum[fl] = -1e100;
 				  continue;
 			   }
-			   auto Zinires = ZiniAlgo().ChainZini<true>(state, all_results[k].first, seed, zini_itr, i, j);
+
+			   auto Zinires = ZiniAlgo().ChainZini_fixed(state, all_results[k].first, seed, zini_itr, i, j);
+
 			   operation_weight_sum[fl] += 加权((long double)Zinires.bbbv / (Zinires.Zini + cls)); // 累加权重
 			}
 			for (const auto& [key, weight] : operation_weight_sum) { // 检查每个操作
