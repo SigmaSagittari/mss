@@ -23,6 +23,40 @@ inline unsigned long long splitmix64(unsigned long long x) {
    return x ^ (x >> 31);
 }
 
+template<typename T>
+class vector2D {
+private:
+   vector<T> flat;
+public:
+   int rows = 0, cols = 0;
+private:
+   int idx(int i, int j) const { return i * cols + j; }
+public:
+   vector2D() = default;
+   vector2D(int r, int c) : rows(r), cols(c), flat(r* c) {}
+   vector2D(int r, int c, const T& val) : rows(r), cols(c), flat(r* c, val) {}
+   void resize(int r, int c) { rows = r; cols = c; flat.resize(r * c); }
+   auto operator[](int i) {
+	  struct Proxy {
+		 std::vector<T>& flat;
+		 int cols;
+		 int row;
+		 T& operator[](int j) { return flat[row * cols + j]; }
+	  };
+	  return Proxy{ flat, cols, i };
+   }
+   auto operator[](int i) const {
+	  struct Proxy {
+		 const std::vector<T>& flat;
+		 int cols;
+		 int row;
+		 const T& operator[](int j) const { return flat[row * cols + j]; }
+	  };
+	  return Proxy{ flat, cols, i };
+   }
+};
+
+
 // ==================== 数据 ====================
 struct GameState {
    enum class Cell : int {

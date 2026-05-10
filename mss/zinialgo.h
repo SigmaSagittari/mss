@@ -314,7 +314,6 @@ class ZiniAlgo {
 		 player pl(state, mines, seed);
 		 int cls = 0;
 		 chord_new.clear();
-		 bool firstmove_open = false;
 		 for (int loop = 1;; ++loop) {
 			pair<int, int> best = pl.pop_best(seed);
 			if (best == pair<int, int> {-1, -1}) break;
@@ -334,14 +333,8 @@ class ZiniAlgo {
 			   cls++;
 			}
 		 }
-		 if (firstmove_open) {
-			int new_val = chaincount_new(state, chord_new, pl.zt_info);
-			cls += new_val;
-		 }
-		 else {
-			int new_val = chaincount_new(state, chord_new, pl.zt_info);
-			cls += new_val;
-		 }
+		int new_val = chaincount_new(state, chord_new, pl.zt_info);
+		cls += new_val;
 		 for (int i = 1; i <= state.rows; ++i)
 			for (int j = 1; j <= state.cols; ++j)
 			   if (pl.board.board[i][j] == GameState::Cell::H && mines.dist[i][j] == false)

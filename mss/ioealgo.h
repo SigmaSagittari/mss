@@ -38,13 +38,13 @@ class ioealgo {
 			if ((long double)zinires.bbbv / (zinires.Zini + cls) < znereq * 0.85) return; // 如果单次迭代的 zne 过低，说明这个随机分布不具有代表性，直接丢弃。 经过一百万盘的测试，0.85 不会丢弃任何盘面。
 			zinires = ZiniAlgo().ChainZini(state, dist, seed, zini_itr); // 计算这个分布的 zne，迭代次数较高以获得更准确的结果。
 			if ((long double)zinires.bbbv / (zinires.Zini + cls) < znereq)  return;
-			//cerr << (zinires.bbbv + 0.0) / (zinires.Zini + cls) * 100 << "%" << endl;
 			cb(dist, zinires);
 		 };
 		 概率分析().all_distrubte(state, basic, structure, mine_distrube, callback_wrapper);
 		 return;
 	  }
 	  int zini_count = 0;
+	  cerr << algo_itr << endl;
 	  for (int i = 1; i <= algo_itr; ++i) {
 		 unsigned long long seed_used = seed;
 		 地雷排布 dist = 概率分析().gen_random(state, basic, structure, mine_distrube, seed); // 生成一个随机分布，作为 zini 的输入。
@@ -55,6 +55,7 @@ class ioealgo {
 		 zini_count += zini_itr;
 		 if ((long double)zinires.bbbv / (zinires.Zini + cls) < znereq)  continue;
 		 cb(dist, zinires);
+
 	  }
 	  cerr << "Zini 计算完成，一共进行了 " << zini_count << " 次迭代。" << endl;
    }
@@ -133,8 +134,8 @@ class ioealgo {
 	  return result;
    }
    ZNR计算结果 get_ZNR_new(const GameState& state, const 基础逻辑结果& basic, const 棋盘结构& structure, const vector<连通块地雷分布>& mine_distrube, const 高级分析结果& advanced
-					   , unsigned long long& seed, long double znereq, int cls, function<long double(long double)> 加权, int algo_itr = 10000, int zini_itr = 20, int 多线搜索 = 5) {
-
+					   , unsigned long long& seed, long double znereq, int cls, function<long double(long double)> 加权, int algo_itr = 10000, int zini_itr = 20,long double 剪枝系数 = 0.3) {
+	  // 剪枝系数 意味着只取评分高级最优解 * 剪枝系数 的变招，越低，剪枝越宽松。
 	  vector<vector<bool>> playable(state.rows + 1, vector<bool>(state.cols + 1, false));
 
 	  for (int i = 1; i <= state.rows; ++i)
@@ -170,7 +171,7 @@ class ioealgo {
 
 	  vector<long double> weight_suffix(all_results.size() + 1, 0.0);
 
-	  vector<pair<ZNR计算结果::操作, long double>> best_results(多线搜索);
+	  vector<pair<ZNR计算结果::操作, long double>> best_results;
 
 	  for (int i = (int)all_results.size()-1; i >=0; --i)
 		 weight_suffix[i] = weight_suffix[i + 1] + 加权((long double)all_results[i].second.bbbv / (all_results[i].second.Zini + cls));
@@ -196,7 +197,7 @@ class ioealgo {
 					 }
 			   } // 没打开的格子，只要单击就行，不需要考虑标雷
 
-			   if (operation_weight_sum[fl] + weight_suffix[k] < best_results[0].second) {
+			   if (!best_results.empty() && operation_weight_sum[fl] + weight_suffix[k] < best_results[0].second * 剪枝系数) {
 				  if(operation_weight_sum[fl]!=-1e100)
 				  // 这个分布的权重加上后续分布的最大权重都无法超过当前最优解，剪枝。
 				  operation_weight_sum[fl] = -1e100;
@@ -208,13 +209,11 @@ class ioealgo {
 			   operation_weight_sum[fl] += 加权((long double)Zinires.bbbv / (Zinires.Zini + cls)); // 累加权重
 			}
 			for (const auto& [key, weight] : operation_weight_sum) { // 检查每个操作
-			   if (weight <= best_results[0].second && best_results.size() == 多线搜索)
+			   if (!best_results.empty() && weight < best_results[0].second * 剪枝系数)
 				  continue;
 			   best_results.push_back({ {i, j, key}, weight });
-			   sort(best_results.begin(), best_results.end(),
-					[](const auto& a, const auto& b) { return a.second < b.second; });
-			   if(best_results.size() > 多线搜索)
-				  best_results.erase(best_results.begin()); // 保持 best_results 的大小不超过 多线搜索
+			   if (best_results.back().second > best_results[0].second)
+				  swap(best_results.back(), best_results[0]);
 			}
 		 }
 	  }
