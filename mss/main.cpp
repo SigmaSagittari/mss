@@ -32,4 +32,6 @@ using namespace std;
 
 int main() {
    ZNR算法测试();
+   //Zini_test();
+
 }

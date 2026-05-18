@@ -35,7 +35,7 @@ class ioealgo {
 	  if (advanced.candidates <= algo_itr) { // 当候选方案足够少，直接遍历
 		 auto callback_wrapper = [&](const 地雷排布& dist) {
 			Zini结果 zinires = ZiniAlgo().ChainZini(state, dist, seed, 1);
-			if ((long double)zinires.bbbv / (zinires.Zini + cls) < znereq * 0.85) return; // 如果单次迭代的 zne 过低，说明这个随机分布不具有代表性，直接丢弃。 经过一百万盘的测试，0.85 不会丢弃任何盘面。
+			if ((long double)zinires.bbbv / (zinires.Zini + cls) < znereq * 0.8) return; // 如果单次迭代的 zne 过低，说明这个随机分布不具有代表性，直接丢弃。 经过一百万盘的测试，0.85 不会丢弃任何盘面。
 			zinires = ZiniAlgo().ChainZini(state, dist, seed, zini_itr); // 计算这个分布的 zne，迭代次数较高以获得更准确的结果。
 			if ((long double)zinires.bbbv / (zinires.Zini + cls) < znereq)  return;
 			cb(dist, zinires);
@@ -87,54 +87,8 @@ class ioealgo {
 	  return playable;
    }
    public:
-   ZNR计算结果 get_ZNR(const GameState& state, const 基础逻辑结果& basic, const 棋盘结构& structure, const vector<连通块地雷分布>& mine_distrube, const 高级分析结果& advanced
-				   , unsigned long long& seed, long double znereq, int cls, bool 加权 = false, int algo_itr = 10000, int zini_itr = 20) {
-	  ZNR计算结果 result;
-	  map<ZNR计算结果::操作, pair<int, long double>> operation_prob; // 统计每个操作的概率，pair<int,longdouble> 表示 {计数, 概率}
-	  result.ZNE_result.dist.probability = vector<vector<long double>>(state.rows + 1, vector<long double>(state.cols + 1, 0.0));
-	  auto callback = [&](const 地雷排布& dist, const Zini结果& zinires) {
-		 result.ZNE_result.count++;
-		 vector<vector<bool>> playable = potential_playable(state, dist);
-		 for (int i = 1; i <= state.rows; ++i)
-			for (int j = 1; j <= state.cols; ++j)
-			   if (dist.dist[i][j]) result.ZNE_result.dist.probability[i][j] += 1.0; // 计数
-		 for (int i = 1; i <= state.rows; ++i)
-			for (int j = 1; j <= state.cols; ++j) {
-			   if (playable[i][j]) {
-				  auto Zinires = ZiniAlgo().ChainZini_fixed(state, dist, seed, zini_itr, i, j);
-				  array<array<bool, 3>, 3> fl = {};
-				  if (state.board[i][j] != GameState::Cell::H) { // 已经打开的格子，周围八个格子的标雷情况
-					 for (int dx = -1; dx <= 1; ++dx)
-						for (int dy = -1; dy <= 1; ++dy) {
-						   int nx = dx + i, ny = dy + j;
-						   if (1 <= nx && nx <= state.rows && 1 <= ny && ny <= state.cols)
-							  fl[dx + 1][dy + 1] = dist.dist[nx][ny];
-						   else
-							  fl[dx + 1][dy + 1] = false; // 边界外视为安全
-						}
-				  } // 没打开的格子，只要单击就行，不需要考虑标雷
-				  auto& t = operation_prob[{i, j, fl}];
-				  t.first++;
-				  if (加权) t.second += pow(2, ((long double)Zinires.bbbv / (Zinires.Zini + cls)) / 0.05); // 计数和累计 zne 增益
-				  else t.second += zinires.Zini - Zinires.Zini;
-			   }
-			}
-	  };
-	  highZNE_inside(callback, state, basic, structure, mine_distrube, advanced, seed, znereq, cls, algo_itr, zini_itr);
-	  for (auto& kv : operation_prob)
-		 if (kv.second.first != 0) {
-			if (加权) kv.second.second = log(kv.second.second) - log(pow(2, znereq / 0.05)); // 计算得分
-			else kv.second.second /= kv.second.first; // 计算平均 ZNE 概率
-			result.ZNR.push_back({ kv.first, kv.second.second });
-		 }
-	  for (int i = 1; i <= state.rows; ++i)
-		 for (int j = 1; j <= state.cols; ++j)
-			result.ZNE_result.dist.probability[i][j] /= result.ZNE_result.count; // 归一化概率
-	  result.ZNE_result.total = (int)round(min((long double)algo_itr, advanced.candidates));
-	  return result;
-   }
    ZNR计算结果 get_ZNR_new(const GameState& state, const 基础逻辑结果& basic, const 棋盘结构& structure, const vector<连通块地雷分布>& mine_distrube, const 高级分析结果& advanced
-					   , unsigned long long& seed, long double znereq, int cls, function<long double(long double)> 加权, int algo_itr = 10000, int zini_itr = 20,long double 剪枝系数 = 0.3) {
+					   , unsigned long long& seed, long double znereq, int cls, function<long double(long double)> 加权, int algo_itr = 10000, int zini_itr = 20,long double 剪枝系数 = 0.1) {
 	  // 剪枝系数 意味着只取评分高级最优解 * 剪枝系数 的变招，越低，剪枝越宽松。
 	  vector<vector<bool>> playable(state.rows + 1, vector<bool>(state.cols + 1, false));
 
@@ -220,7 +174,7 @@ class ioealgo {
 
 	  result.ZNE_result.count = (int)all_results.size();
 	  result.ZNE_result.total = (int)round(min((long double)algo_itr, advanced.candidates));
-	  result.ZNE_result.dist = {vector<vector<long double>>(state.rows + 1, vector<long double>(state.cols + 1, 0.0))};
+	  result.ZNE_result.dist.probability.resize(state.rows + 1, state.cols + 1, 0.0);
 	  for (int i = 1; i <= state.rows; ++i)
 		 for (int j = 1; j <= state.cols; ++j) {
 			for (const auto& res : all_results)

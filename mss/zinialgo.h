@@ -27,7 +27,7 @@ class ZiniAlgo {
 	  // 保存空格子的信息，避免反复 dfs 带来的性能损失。
 	  vector<pair<int, int>> tiles; // 空格子（和临空位）的列表
 	  vector<pair<int, int>> opening_interval; // oi[x] 表示 x 号 opening 对应 tiles[oi[x].first ~ oi[x].second] 这段区间的格子（含两端）
-	  vector<vector<int>> opening_id; // opening_id[i][j] 表示这个格子属于哪个 opening，0 表示不属于任何 opening，空边不会被赋值，为了防止一个空边同时属于多个空，所以确保访问空的中心。
+	  vector2D<int> opening_id; // opening_id[i][j] 表示这个格子属于哪个 opening，0 表示不属于任何 opening，空边不会被赋值，为了防止一个空边同时属于多个空，所以确保访问空的中心。
 	  int openings = 0 , tilestop = 0; // 空的数量
 
 	  // 这个类暂时不启用，会在下一个更新被用到。
@@ -35,8 +35,8 @@ class ZiniAlgo {
    struct player {
 	  const 地雷排布& mines;
 	  thread_local inline static GameState board;
-	  thread_local inline static vector<vector<int>> hide_val, priority;
-	  thread_local inline static vector<vector<bool>> bbv, vis;
+	  thread_local inline static vector2D<int> hide_val, priority;
+	  thread_local inline static vector2D<char> bbv, vis;
 	  thread_local inline static zero_tile_information zt_info;
 	  // hide_val 表示打开这个格子之后，会显示什么数字？（不要打开地雷）
 	  // opening_id 表示这个格子的归属地
@@ -46,7 +46,7 @@ class ZiniAlgo {
 	  struct check_info {
 		 vector<pair<int, int>> check_priority[10];
 		 int maximum = 0, stack_top[10] = {};
-		 void insert(int x, int y, int p, unsigned long long& seed) {
+		 inline void insert(int x, int y, int p, unsigned long long& seed) {
 			if (p >= 0) {
 			   check_priority[p][stack_top[p]] = { x, y };
 			   maximum = max(maximum, p);
@@ -55,7 +55,7 @@ class ZiniAlgo {
 			   stack_top[p]++;
 			}
 		 }
-		 pair<int, int> pop_best(unsigned long long& seed) {
+		 inline pair<int, int> pop_best(unsigned long long& seed) {
 			for (int i = maximum; i >= 0; --i) {
 			   while (stack_top[i] > 0) {
 				  pair<int, int> res = check_priority[i][--stack_top[i]];
@@ -104,12 +104,12 @@ class ZiniAlgo {
 		 check.maximum = 0;
 		 zt_info.openings = 0;
 		 zt_info.tilestop = 0;
-		 if (hide_val.size() != state.rows + 1 || hide_val[0].size() != state.cols + 1) {
-			hide_val = vector<vector<int>>(state.rows + 1, vector<int>(state.cols + 1, 0));
-			priority = vector<vector<int>>(state.rows + 1, vector<int>(state.cols + 1, 0));
-			bbv = vector<vector<bool>>(state.rows + 1, vector<bool>(state.cols + 1, true));
-			vis = vector<vector<bool>>(state.rows + 1, vector<bool>(state.cols + 1, false));
-			zt_info.opening_id = vector<vector<int>>(state.rows + 1, vector<int>(state.cols + 1, -1));
+		 if (hide_val.rows != state.rows + 1 || hide_val.cols != state.cols + 1) {
+			hide_val.resize(state.rows + 1, state.cols + 1, 0);
+			priority.resize(state.rows + 1, state.cols + 1, 0);
+			bbv.resize(state.rows + 1, state.cols + 1, true);
+			vis.resize(state.rows + 1, state.cols + 1, false);
+			zt_info.opening_id.resize(state.rows + 1, state.cols + 1, -1);
 			zt_info.opening_interval = vector<pair<int, int>>(state.rows * state.cols + 1, pair<int, int>{0, 0});
 			zt_info.tiles = vector<pair<int, int>>(state.rows * state.cols * 3 + 1, pair<int, int>{0, 0});
 			for (int i = 0; i <= 9; ++i) {
@@ -120,17 +120,16 @@ class ZiniAlgo {
 		 }
 		 else {
 			board.total_mines = state.total_mines;
-			for (int i = 1; i <= state.rows; ++i)
-			   for (int j = 1; j <= state.cols; ++j) {
-				  hide_val[i][j] = 0;
-				  priority[i][j] = 0;
-				  bbv[i][j] = true;
-				  vis[i][j] = false;
-				  zt_info.opening_id[i][j] = -1;
-				  board.board[i][j] = state.board[i][j];
-				  board.flags[i][j] = state.flags[i][j];
-			   }
-			for (int i = 0; i <= state.rows * state.cols; ++i)
+			hide_val.fill_all(0);
+			priority.fill_all(0);
+			bbv.fill_all(true);
+			vis.fill_all(false);
+			zt_info.opening_id.fill_all(-1);
+			for (int i = 0; i < board.board.flat.size(); ++i) {
+			   board.board.flat[i] = state.board.flat[i];
+			   board.flags.flat[i] = state.flags.flat[i];
+			}
+			for (int i = 0; i <= state.rows * state.cols / 4; ++i)
 			   zt_info.opening_interval[i] = pair<int, int>{ 0,0 };
 			for(int i=0;i<=state.rows*state.cols*3;++i)
 			   zt_info.tiles[i] = pair<int, int>{ 0,0 };
@@ -139,7 +138,7 @@ class ZiniAlgo {
 		 }
 		 for (int i = 1; i <= state.rows; ++i)
 			for (int j = 1; j <= state.cols; ++j)
-			   if (mines.dist[i][j] == true) {
+			   if (mines.dist[i][j]) {
 				  for_each_adjacent(i, j, state.rows, state.cols, [&](int nx, int ny) {
 					 hide_val[nx][ny]++;
 				  });
@@ -147,7 +146,7 @@ class ZiniAlgo {
 			   }
 		 for (int i = 1; i <= state.rows; ++i)	
 			for (int j = 1; j <= state.cols; ++j) {
-			   if (mines.dist[i][j] == true) continue;
+			   if (mines.dist[i][j]) continue;
 			   if (hide_val[i][j] == 0 && zt_info.opening_id[i][j] == -1) {
 				  opening_tile_dfs(i, j, zt_info);
 			   }
@@ -163,7 +162,7 @@ class ZiniAlgo {
 			   assert(vis[i][j] == false);
 		 for (int i = 1; i <= state.rows; ++i)
 			for (int j = 1; j <= state.cols; ++j) {
-			   if (mines.dist[i][j] == true)
+			   if (mines.dist[i][j])
 				  priority[i][j] = -10000;
 			   else
 				  if (hide_val[i][j] == 0) {
@@ -171,7 +170,7 @@ class ZiniAlgo {
 					 continue;
 				  }
 			   priority[i][j]--;
-			   if (mines.dist[i][j] == true && state.flags[i][j] == false) {
+			   if (mines.dist[i][j]&& !state.flags[i][j]) {
 				  priority[i][j] = -10000;
 				  for_each_adjacent(i, j, state.rows, state.cols, [&](int nx, int ny) {
 					 priority[nx][ny]--;
@@ -322,7 +321,7 @@ class ZiniAlgo {
 			   // 这里原本是需要修改 cls 的，但是接下来有一些复杂的图论处理，最后再根据连通块数量来计算 cls。
 			}
 			for_each_adjacent(best.first, best.second, pl.board.rows, pl.board.cols, [&](int nx, int ny) { // 标一圈旗
-			   if (mines.dist[nx][ny] == true && pl.board.flags[nx][ny] == false) {
+			   if (mines.dist[nx][ny] && !pl.board.flags[nx][ny]) {
 				  pl.flag(nx, ny, seed);
 				  cls++;
 			   }
@@ -353,10 +352,10 @@ class ZiniAlgo {
 	  GameState state_copy = state; // 实在是懒得处理 ChainZini_fixed 的 const 引用问题了，直接复制一份吧，不然全是 bug。
 
 	  auto open = [&](int x, int y, auto&& self) -> void {
-		 if (mines.dist[x][y] == true) return; // 不能打开地雷
+		 if (mines.dist[x][y]) return; // 不能打开地雷
 		 int val = 0;
 		 for_each_adjacent(x, y, state_copy.rows, state_copy.cols, [&](int nx, int ny) {
-			if (mines.dist[nx][ny] == true) val++;
+			if (mines.dist[nx][ny]) val++;
 		 });
 		 state_copy.board[x][y] = static_cast<GameState::Cell>(val);
 		 if(val == 0)
@@ -374,7 +373,7 @@ class ZiniAlgo {
 	  else {
 		 extra_cls++;
 		 for_each_adjacent(x, y, state_copy.rows, state_copy.cols, [&](int nx, int ny) {
-			if (mines.dist[nx][ny] == true && state_copy.flags[nx][ny] == false) {
+			if (mines.dist[nx][ny] && !state_copy.flags[nx][ny]) {
 			   extra_cls++;
 			   state_copy.flags[nx][ny] = true;
 			}

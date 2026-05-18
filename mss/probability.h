@@ -233,7 +233,7 @@ class 概率分析 {
    }
    地雷概率 transfer(const GameState& state, const 基础逻辑结果& basic, const 棋盘结构& structure, const vector<连通块地雷分布>& mine_distrube, const 高级分析结果& advancedresult) {
 	  地雷概率 result;
-	  result.probability = vector<vector<long double>>(state.rows + 1, vector<long double>(state.cols + 1, 0.0));
+	  result.probability.resize(state.rows + 1, state.cols + 1, 0.0);
 	  for (int i = 1; i <= state.rows; ++i)
 		 for (int j = 1; j <= state.cols; ++j) {
 			if (basic.marks[i][j] == 基础逻辑结果::Mark::S) continue;
@@ -258,7 +258,7 @@ class 概率分析 {
 	  // 均匀随机生成一个符合当前棋盘状态的雷分布，并返回每个格子是雷的概率（0或1）。
 	  unsigned long long local_seed = seed;
 	  地雷排布 result;
-	  result.dist = vector<vector<bool>>(state.rows + 1, vector<bool>(state.cols + 1, false));
+	  result.dist.resize(state.rows + 1, state.cols + 1, false);
 	  for (int i = 1; i <= state.rows; ++i)
 		 for (int j = 1; j <= state.cols; ++j) {
 			if (basic.marks[i][j] == 基础逻辑结果::Mark::S) continue;
@@ -404,7 +404,7 @@ class 概率分析 {
 
 		 // recursive over blocks
 		 地雷排布 prob_template;
-		 prob_template.dist = vector<vector<bool>>(state.rows + 1, vector<bool>(state.cols + 1, false));
+		 prob_template.dist.resize(state.rows + 1, state.cols + 1, false);
 		 // mark basic M as 1.0 and S as 0.0 (optional); we'll leave revealed numbers as 0
 		 for (int i = 1; i <= state.rows; ++i)
 			for (int j = 1; j <= state.cols; ++j)

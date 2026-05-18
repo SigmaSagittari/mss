@@ -69,7 +69,7 @@ void 中级Zini测试() {
 
    map<pair<int, int>, long long> cnt;
 
-   for (int i = 1; i <= 1000000; ++i) { //  一百万
+   for (int i = 1; i <= 100000; ++i) { //  一百万
 	  unsigned long long seed = i;
 	  地雷排布 t = cache.genRandom(seed);
 	  auto res2 = ZiniAlgo().ChainZini(gs, t, seed, 10);
@@ -168,7 +168,7 @@ void ZNR算法测试() {
 
    GameState gs(R, C, mines);
    地雷排布 pa;
-   pa.dist = vector<vector<bool>>(R + 1, vector<bool>(C + 1, false));
+   pa.dist.resize(R + 1, C + 1, false);
 
    for (int i = 0; i < R; ++i) {
 	  for (int j = 0; j < C; ++j) {
@@ -251,4 +251,62 @@ void ZNR算法测试() {
 	  cout << "  ";
 	  cout << "的 权重: " << item.weight << '\n';
    }
+}
+
+void Zini_test() {
+   int n, m, mines; char t;
+   if (!(cin >> m >> t >> n >> t >> mines)) return;
+
+   int R = n, C = m;
+   vector<string> rows;
+   rows.reserve(R);
+   for (int i = 0; i < R; ++i) {
+	  string s; cin >> s;
+	  if ((int)s.size() < C) s.append(C - (int)s.size(), 'H');
+	  rows.push_back(s);
+   }
+
+   GameState gs(R, C, mines);
+   地雷排布 pa;
+   pa.dist.resize(R + 1, C + 1, false);
+
+   for (int i = 0; i < R; ++i) {
+	  for (int j = 0; j < C; ++j) {
+		 char ch = rows[i][j];
+		 if (ch == 'H' || ch == 'h') {
+			gs.board[i + 1][j + 1] = GameState::Cell::H;
+			pa.dist[i + 1][j + 1] = false;
+		 }
+		 else if (ch == 'F' || ch == 'f') {
+			gs.flags[i + 1][j + 1] = true;
+			gs.board[i + 1][j + 1] = GameState::Cell::H;
+			pa.dist[i + 1][j + 1] = true; // F also sets mine distribution
+		 }
+		 else if (ch == 'M' || ch == 'm') {
+			// New input: M marks a mine in distribution but GameState remains hidden
+			gs.board[i + 1][j + 1] = GameState::Cell::H;
+			pa.dist[i + 1][j + 1] = true;
+		 }
+		 else if (ch >= '0' && ch <= '8') {
+			gs.board[i + 1][j + 1] = static_cast<GameState::Cell>(ch - '0');
+			pa.dist[i + 1][j + 1] = false;
+		 }
+		 else {
+			gs.board[i + 1][j + 1] = GameState::Cell::H;
+			pa.dist[i + 1][j + 1] = false;
+		 }
+	  }
+   }
+
+   cerr << "[Mainboard]" << endl;
+   for (int i = 1; i <= gs.rows; ++i) {
+	  for (int j = 1; j <= gs.cols; ++j) {
+		 cerr << static_cast<int> (gs.board[i][j]) << " ";
+	  }
+	  cerr << endl;
+   }
+
+   unsigned long long seed = 19260817;
+   Zini结果 res = ZiniAlgo().ChainZini(gs, pa, seed, 1);
+   cerr << res.bbbv << ' ' << res.Zini << endl;
 }

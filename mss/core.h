@@ -24,21 +24,22 @@ inline unsigned long long splitmix64(unsigned long long x) {
 }
 
 template<typename T>
-class vector2D {
-private:
+struct vector2D {
    vector<T> flat;
-public:
    int rows = 0, cols = 0;
-private:
    int idx(int i, int j) const { return i * cols + j; }
-public:
+
    vector2D() = default;
    vector2D(int r, int c) : rows(r), cols(c), flat(r* c) {}
    vector2D(int r, int c, const T& val) : rows(r), cols(c), flat(r* c, val) {}
-   void resize(int r, int c) { rows = r; cols = c; flat.resize(r * c); }
+   void resize(int r, int c, const T& val) { rows = r; cols = c; flat.resize(r * c); fill(flat.begin(), flat.end(), val); }
+   void fill_all(const T& val) {
+	  fill(flat.begin(), flat.end(), val);
+   }
+
    auto operator[](int i) {
 	  struct Proxy {
-		 std::vector<T>& flat;
+		 vector<T>& flat;
 		 int cols;
 		 int row;
 		 T& operator[](int j) { return flat[row * cols + j]; }
@@ -47,7 +48,7 @@ public:
    }
    auto operator[](int i) const {
 	  struct Proxy {
-		 const std::vector<T>& flat;
+		 const vector<T>& flat;
 		 int cols;
 		 int row;
 		 const T& operator[](int j) const { return flat[row * cols + j]; }
@@ -62,14 +63,11 @@ struct GameState {
    enum class Cell : int {
 	  N0 = 0, N1 = 1, N2 = 2, N3 = 3, N4 = 4, N5 = 5, N6 = 6, N7 = 7, N8 = 8, H = 9
    };
-
-   vector<vector<Cell>> board;    // 当前盘面
-   vector<vector<bool>> flags;    // 旗帜标记
+   vector2D<Cell> board; // 当前盘面
+   vector2D<char> flags;    // 旗帜标记
    int rows, cols, total_mines;
 
-   GameState(int r, int c, int m) : rows(r), cols(c), total_mines(m) {
-	  board = vector<vector<Cell>>(r + 1, vector<Cell>(c + 1, Cell::H));
-	  flags = vector<vector<bool>>(r + 1, vector<bool>(c + 1, false));
+   GameState(int r, int c, int m) : rows(r), cols(c), total_mines(m), board(r+1,c+1,Cell::H), flags(r+1,c+1,false) {
    }
    GameState() {
 	  rows = cols = total_mines = 0;
@@ -102,11 +100,10 @@ inline void for_each_adjacent(int x, int y, int rows, int cols, Func&& func) {
 struct 基础逻辑结果 {
    enum class Mark { S, M, H, T };  // S=安全, M=危险, H=有信息未开, T=无信息未开
 
-   vector<vector<Mark>> marks;
+   vector2D<Mark> marks;
    int Tsum = 0, Msum = 0;
 
-   基础逻辑结果(int rows, int cols) {
-	  marks = vector<vector<Mark>>(rows + 1, vector<Mark>(cols + 1, Mark::S));
+   基础逻辑结果(int rows, int cols) : marks(rows+1,cols+1,Mark::S) {
 	  Tsum = 0, Msum = 0;
    }
 };
@@ -156,11 +153,11 @@ struct 高级分析结果 {
 };
 
 struct 地雷概率 {
-   vector<vector<long double>> probability;
+   vector2D<long double> probability;
 };
 
 struct 地雷排布 {
-   vector<vector<bool>> dist;
+   vector2D<char> dist;
 };
 
 struct Zini结果 {
