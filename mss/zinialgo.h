@@ -29,8 +29,6 @@ class ZiniAlgo {
 	  vector<pair<int, int>> opening_interval; // oi[x] 表示 x 号 opening 对应 tiles[oi[x].first ~ oi[x].second] 这段区间的格子（含两端）
 	  vector2D<int> opening_id; // opening_id[i][j] 表示这个格子属于哪个 opening，0 表示不属于任何 opening，空边不会被赋值，为了防止一个空边同时属于多个空，所以确保访问空的中心。
 	  int openings = 0 , tilestop = 0; // 空的数量
-
-	  // 这个类暂时不启用，会在下一个更新被用到。
    };
    struct player {
 	  const 地雷排布& mines;
