@@ -198,14 +198,6 @@ void ZNR算法测试() {
 	  }
    }
 
-   cerr << "[Mainboard]" << endl;
-   for (int i = 1; i <= gs.rows; ++i) {
-	  for (int j = 1; j <= gs.cols; ++j) {
-		 cerr << static_cast<int> (gs.board[i][j]) << " ";
-	  }
-	  cerr << endl;
-   }
-
 
    unsigned long long seed = 18075243459941470590;
 
@@ -219,6 +211,17 @@ void ZNR算法测试() {
    }
 
    AnalysisCache cache(gs);
+
+   地雷概率 ttt = cache.get_地雷概率();
+
+   cerr << "[probability]" << endl;
+   for (int i = 1; i <= gs.rows; ++i) {
+	  for (int j = 1; j <= gs.cols; ++j) {
+		 cerr << ttt.probability[i][j] << " ";
+	  }
+	  cerr << endl;
+   }
+
 
    ZNR计算结果 znr = cache.get_ZNR_new(seed, znereq, cls, ioealgo::指数加权, 1000000, 20);
 
@@ -307,6 +310,6 @@ void Zini_test() {
    }
 
    unsigned long long seed = 19260817;
-   Zini结果 res = ZiniAlgo().ChainZini(gs, pa, seed, 1);
+   Zini结果 res = ZiniAlgo().ChainZini(gs, pa, seed, 100);
    cerr << res.bbbv << ' ' << res.Zini << endl;
 }

@@ -31,7 +31,9 @@ using namespace std;
 #include "test.h"          // 包含测试函数
 
 int main() {
-   ZNR算法测试();
+	// 初级Zini测试();
+	// 中级Zini测试();
+	 ZNR算法测试();
    //Zini_test();
-
+   return 0;
 }

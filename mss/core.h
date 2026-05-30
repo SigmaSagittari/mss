@@ -74,6 +74,7 @@ struct GameState {
    }
 };
 
+//==================== 元函数 ====================
 inline bool isdigit(GameState::Cell c) {
    int val = static_cast<int>(c);
    return 0 <= val && val <= 8;
@@ -123,7 +124,7 @@ struct 棋盘结构 {
 	  vector<限制> 限制们;
    };
    vector<连通块> board_struct;
-   vector<vector<连通块*>> cell2connect; // 每个格子对应的连通块指针列表
+   vector2D<连通块*> cell2connect; // 每个格子对应的连通块指针列表
 };
 struct 连通块地雷分布 {
    struct 分布 {
