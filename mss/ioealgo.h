@@ -1,30 +1,4 @@
 ﻿#pragma once
-#include <iostream>
-#include <vector>
-#include <string>
-#include <cstdint>
-#include <algorithm>
-#include <unordered_map>
-#include <array>
-#include <unordered_set>
-#include <iomanip>
-#include <memory>
-#include <cmath>
-#include <cassert>
-#include <chrono>
-#include <limits>
-#include <functional>
-#include <bit>
-#include <map>
-
-using namespace std;
-
-#include "core.h"
-#include "basic.h"
-#include "struct.h"
-#include "distrubution.h"
-#include "probability.h"
-#include "zinialgo.h"
 
 class ioealgo {
    private:
@@ -34,8 +8,11 @@ class ioealgo {
 			 // znereq 表示至少期待的 zne 的要求，cls 表示已经进行的点击次数，itr 表示计算 zini 时的迭代次数，迭代次数越高越准确但越慢。
 	  if (advanced.candidates <= algo_itr) { // 当候选方案足够少，直接遍历
 		 auto callback_wrapper = [&](const 地雷排布& dist) {
-			Zini结果 zinires = ZiniAlgo().ChainZini(state, dist, seed, 1);
-			if ((long double)zinires.bbbv / (zinires.Zini + cls) < znereq * 0.8) return; // 如果单次迭代的 zne 过低，说明这个随机分布不具有代表性，直接丢弃。 经过一百万盘的测试，0.85 不会丢弃任何盘面。
+			Zini结果 zinires;
+			if (state.cols * state.rows <= 100) { // 盘面小时，一次点击就会带来特别大的差距，所以不适用剪枝。
+			   zinires = ZiniAlgo().ChainZini(state, dist, seed, 1);
+			   if ((long double)zinires.bbbv / (zinires.Zini + cls) < znereq * 0.8) return; // 如果单次迭代的 zne 过低，说明这个随机分布不具有代表性，直接丢弃。 经过一百万盘的测试，0.85 不会丢弃任何盘面。
+			}
 			zinires = ZiniAlgo().ChainZini(state, dist, seed, zini_itr); // 计算这个分布的 zne，迭代次数较高以获得更准确的结果。
 			if ((long double)zinires.bbbv / (zinires.Zini + cls) < znereq)  return;
 			cb(dist, zinires);
@@ -121,6 +98,8 @@ class ioealgo {
 		 all_results.push_back({ dist, zinires });
 	  };
 	  highZNE_inside(callback, state, basic, structure, mine_distrube, advanced, seed, znereq, cls, algo_itr, zini_itr);
+
+	  cerr << "采样完成，共" << all_results.size() << "个" << endl;
 	  stable_sort(all_results.begin(), all_results.end(), [&](const auto& a, const auto& b) {return (a.second.bbbv * 1.0) / (a.second.Zini + cls) > (b.second.bbbv * 1.0) / (b.second.Zini + cls); });
 
 	  vector<long double> weight_suffix(all_results.size() + 1, 0.0);
@@ -187,6 +166,9 @@ class ioealgo {
 	  return result;
    }
 
+   static inline long double 软指数加权(long double x) {
+	  return pow(2, fmin(2.00,x) / 0.05);
+   }
    static inline long double 指数加权(long double x) { // 没有特殊理由就用这个
 	  return pow(2, x / 0.05);
    }

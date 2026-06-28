@@ -1,26 +1,5 @@
 ﻿#pragma once
 
-#include <iostream>
-#include <vector>
-#include <string>
-#include <cstdint>
-#include <algorithm>
-#include <unordered_map>
-#include <array>
-#include <unordered_set>
-#include <iomanip>
-#include <memory>
-#include <cmath>
-#include <cassert>
-#include <chrono>
-#include <limits>
-#include <functional>
-#include <bit>
-#include "core.h"
-#include "basic.h"
-
-
-
 class 连通块构造 {
    private:
    void cell_list(int x, int y, const GameState& state, const 基础逻辑结果& basicresult, vector2D<char>& vis, vector<pair<int,int>>& cell) {

@@ -1,20 +1,4 @@
 ﻿#pragma once
-#include <iostream>
-#include <vector>
-#include <string>
-#include <cstdint>
-#include <algorithm>
-#include <unordered_map>
-#include <array>
-#include <unordered_set>
-#include <iomanip>
-#include <memory>
-#include <cmath>
-#include <cassert>
-#include <chrono>
-#include <limits>
-#include <functional>
-#include <bit>
 
 inline unsigned long long splitmix64(unsigned long long x) {
    x += 0x9e3779b97f4a7c15;

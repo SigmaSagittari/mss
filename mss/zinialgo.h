@@ -1,26 +1,5 @@
 ﻿#pragma once
 
-#include <iostream>
-#include <vector>
-#include <string>
-#include <cstdint>
-#include <algorithm>
-#include <unordered_map>
-#include <array>
-#include <unordered_set>
-#include <iomanip>
-#include <memory>
-#include <cmath>
-#include <cassert>
-#include <chrono>
-#include <limits>
-#include <functional>
-#include <bit>
-
-using namespace std;
-
-#include "core.h"
-
 class ZiniAlgo {
    private:
    struct zero_tile_information {

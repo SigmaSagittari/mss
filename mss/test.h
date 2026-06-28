@@ -1,102 +1,72 @@
 ﻿#pragma once
-#include <iostream>
-#include <vector>
-#include <string>
-#include <cstdint>
-#include <algorithm>
-#include <unordered_map>
-#include <array>
-#include <unordered_set>
-#include <iomanip>
-#include <memory>
-#include <cmath>
-#include <cassert>
-#include <chrono>
-#include <limits>
-#include <functional>
-#include <bit>
-#include <thread>
-#include <mutex>
-
-using namespace std;
-
-#include "core.h"          // 数据结构
-#include "basic.h"         // 基础逻辑分析算法（降低核心算法压力）
-#include "struct.h"        // 建立棋盘的图论结构（连通块等）
-#include "distrubution.h"  // 根据结构计算地雷分布
-#include "probability.h"   // 根据地雷分布计算概率，生成随机分布等等
-#include "zinialgo.h"      // 包含 Zini 算法的实现
-#include "ioealgo.h"       // 包含 ioe 算法的实现
-#include "analysiscache.h" // 管理分析结果的缓存，避免重复计算，一键导入上下文
 
 void 初级Zini测试() {
-   GameState gs(9, 9, 10);
-   for (int i = 1; i <= 9; ++i)
-	  for (int j = 1; j <= 9; ++j)
+   int n = 6, m = 7, mines = 16;
+   GameState gs(n, m, mines);
+   for (int i = 1; i <= n; ++i)
+	  for (int j = 1; j <= m; ++j)
 		 gs.board[i][j] = GameState::Cell::H;
 
    AnalysisCache cache(gs);
    unsigned long long result = 0;
 
+   // 统计 ioe = bbbv / Zini
+   map<int, int> ioeCount;  // ioe * 100 的整数值 -> 出现次数
+   int totalValid = 0;
+
    auto start = chrono::high_resolution_clock::now();
 
-   for (int i = 1; i <= 1000000; ++i) { //  一百万
+   for (int i = 1; i <= 100000000; ++i) {
 	  unsigned long long seed = i;
 	  地雷排布 t = cache.genRandom(seed);
 	  auto res = ZiniAlgo().ChainZini(gs, t, seed);
 	  volatile auto tmp = res;
 	  result = splitmix64(result + (unsigned long long) tmp.Zini * i);
+
+	  // 统计 ioe
+	  if (tmp.Zini != 0) {
+		 double ioe = (double)tmp.bbbv / tmp.Zini * 100.0;  // 百分比
+		 int key = (int)round(ioe);  // 四舍五入到整数百分比
+		 ioeCount[key]++;
+		 totalValid++;
+	  }
+	  if (i % 1000000 == 0) cerr << i / 1000000 << '%' << endl;
    }
 
    auto end = chrono::high_resolution_clock::now();
    auto duration = chrono::duration_cast<chrono::milliseconds>(end - start);
 
    cout << "Test completed, result: " << result << endl;
-   cout << "Should be " << 6734981085506469534 << endl;
    cout << "Time: " << duration.count() / 1000.0 << " seconds" << endl;
-}
-void 中级Zini测试() {
+   cout << "\n=== ioe (bbbv/Zini) 统计 (精确到百分位) ===" << endl;
+   cout << fixed << setprecision(8);  // 改为4位小数
 
-   GameState gs(16, 16, 40);
-   for (int i = 1; i <= 16; ++i)
-	  for (int j = 1; j <= 16; ++j)
-		 gs.board[i][j] = GameState::Cell::H;
-
-   AnalysisCache cache(gs);
-   unsigned long long result = 0;
-
-   auto start = chrono::high_resolution_clock::now();
-
-   map<pair<int, int>, long long> cnt;
-
-   for (int i = 1; i <= 100000; ++i) { //  一百万
-	  unsigned long long seed = i;
-	  地雷排布 t = cache.genRandom(seed);
-	  auto res2 = ZiniAlgo().ChainZini(gs, t, seed, 10);
-	  cnt[{res2.Zini, res2.bbbv}]++;
-	  if (i % 10000 == 0) cerr << "# " << i << "DONE" << endl;
+   // 输出统计结果，累积百分比
+   int cumulative = 0;
+   for (const auto& [ioePercent, count] : ioeCount) {
+	  cumulative += count;
+	  double prefix = (double)cumulative / totalValid * 100.0;
+	  double suffix = 100.0 - prefix;
+	  cout << "ioe " << ioePercent << "%"
+		 << "  前缀=" << prefix << "%"
+		 << "  后缀=" << suffix << "%"
+		 << "  (次数=" << count << ")" << endl;
    }
-
-   for (auto i : cnt) {
-	  cout << i.first.first << ' ' << i.first.second << ' ' << i.second << endl;
-   }
-
-   auto end = chrono::high_resolution_clock::now();
-   auto duration = chrono::duration_cast<chrono::milliseconds>(end - start);
-
-   cout << "Test completed, result: " << result << endl;
-   cout << "Should be " << 6734981085506469534 << endl;
-   cout << "Time: " << duration.count() / 1000.0 << " seconds" << endl;
-
-
-
 }
 
-void 多线程Zini测试() {
-   const int N = 30;
-   const int M = 16;
-   const int MINES = 99;
-   const long long ITERATIONS = 100000000;
+
+void 多线程Zini测试(int N,int M,int MINES) {
+
+   FILE* __outFile = nullptr;
+   {
+	  string path = string("C:\\Users\\19429\\Downloads\\ioe_table\\") + to_string(N) + "x" + to_string(M) + "x" + to_string(MINES) + ".txt";
+	  if (freopen_s(&__outFile, path.c_str(), "w", stdout) != 0) {
+		 cerr << "无法重定向 stdout，继续使用默认 stdout" << endl;
+	  }
+   }
+
+   cerr << N << "x" << M << "/" << MINES << "TESTING:" << endl;
+   const long long ITERATIONS = 10000000;
    const unsigned int NUM_THREADS = 8;
 
    GameState gs(N, M, MINES);
@@ -104,26 +74,36 @@ void 多线程Zini测试() {
 	  for (int j = 1; j <= M; ++j)
 		 gs.board[i][j] = GameState::Cell::H;
 
-   map<pair<int, int>, long long> cnt;
+   // 统计 ioe = bbbv / Zini
+   map<int, long long> ioeCount;  // ioe * 100 的整数值 -> 出现次数
+   long long totalValid = 0;
    mutex mtx;
 
    auto start = chrono::high_resolution_clock::now();
 
    auto worker = [&](unsigned long long start_seed, unsigned long long end_seed) {
 	  AnalysisCache cache(gs);
-	  map<pair<int, int>, long long> local;
+	  map<int, long long> localIoeCount;
+	  long long localValid = 0;
 
 	  for (unsigned long long i = start_seed; i < end_seed; ++i) {
-		 unsigned long long seed = i;  // 关键：每次重新赋值，传副本进去
+		 unsigned long long seed = i;
 		 auto t = cache.genRandom(seed);
 		 auto res = ZiniAlgo().ChainZini(gs, t, seed, 8);
-		 local[{res.Zini, res.bbbv}]++;
+
+		 if (res.Zini != 0) {
+			double ioe = (double)res.bbbv / res.Zini * 100.0;
+			int key = (int)round(ioe);
+			localIoeCount[key]++;
+			localValid++;
+		 }
 	  }
 
 	  lock_guard<mutex> lock(mtx);
-	  for (auto& [key, val] : local) {
-		 cnt[key] += val;
+	  for (auto& [key, val] : localIoeCount) {
+		 ioeCount[key] += val;
 	  }
+	  totalValid += localValid;
    };
 
    vector<thread> threads;
@@ -141,14 +121,20 @@ void 多线程Zini测试() {
    auto end = chrono::high_resolution_clock::now();
    auto duration = chrono::duration_cast<chrono::milliseconds>(end - start);
 
-   long long total = 0;
-   for (auto& [key, val] : cnt) {
-	  cout << key.first << ' ' << key.second << ' ' << val << endl;
-	  total += val;
+   cout << fixed << setprecision(8);
+
+   long long cumulative = 0;
+   for (const auto& [ioePercent, count] : ioeCount) {
+	  cumulative += count;
+	  double prefix = (double)cumulative / totalValid * 100.0;
+	  double suffix = 100.0 - prefix;
+	  cout << "ioe " << ioePercent << "%"
+		 << "  前缀=" << prefix << "%"
+		 << "  后缀=" << suffix << "%"
+		 << "  (次数=" << count << ")" << endl;
    }
 
-   cout << "Total iterations: " << total << endl;
-   cout << "Time: " << duration.count() / 1000.0 << " seconds" << endl;
+   cerr << "Time: " << duration.count() / 1000.0 << " seconds" << endl;
 }
 
 
@@ -223,7 +209,7 @@ void ZNR算法测试() {
    }
 
 
-   ZNR计算结果 znr = cache.get_ZNR_new(seed, znereq, cls, ioealgo::指数加权, 1000000, 20);
+   ZNR计算结果 znr = cache.get_ZNR_new(seed, znereq, cls, ioealgo::软指数加权, 1000000, 20);
 
    // 输出 ZNE 版面统计
    cout << "ZNE版面数量: " << znr.ZNE_result.count << " in All " << znr.ZNE_result.total << "maps (" << (long double)znr.ZNE_result.count / znr.ZNE_result.total * 100 << "%)" << '\n';

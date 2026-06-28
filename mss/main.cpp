@@ -8,6 +8,7 @@
 #include <unordered_set>
 #include <iomanip>
 #include <memory>
+#include <cstdio>
 #include <cmath>
 #include <cassert>
 #include <chrono>
@@ -16,7 +17,7 @@
 #include <bit>
 #include <thread>
 #include <mutex>
-
+#include <map>
 
 using namespace std;
 
@@ -31,9 +32,6 @@ using namespace std;
 #include "test.h"          // 包含测试函数
 
 int main() {
-	// 初级Zini测试();
-	// 中级Zini测试();
-	 ZNR算法测试();
-   //Zini_test();
+   ZNR算法测试();
    return 0;
 }
